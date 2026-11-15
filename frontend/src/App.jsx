@@ -91,6 +91,11 @@ export default function App() {
   // Spatial drawing & region filter state
   const [selectedRegion, setSelectedRegion] = useState(null); // { minLat, maxLat, minLon, maxLon } | null
   const [isDrawing, setIsDrawing] = useState(false);
+  const isDrawingRef = useRef(isDrawing);
+
+  useEffect(() => {
+    isDrawingRef.current = isDrawing;
+  }, [isDrawing]);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -176,6 +181,15 @@ export default function App() {
         }
         return prev;
       });
+    });
+
+    // Deselect active hotspot point and target coordinate pin when clicking elsewhere on the map (preserves region selection)
+    map.on('click', () => {
+      if (isDrawingRef.current) return;
+      setSelectedFire(null);
+      setTargetPin(null);
+      setIsEditingCoords(false);
+      map.closePopup();
     });
 
     mapInstanceRef.current = map;
@@ -387,7 +401,10 @@ export default function App() {
       `;
 
       circle.bindPopup(popupHtml);
-      circle.on('click', () => {
+      circle.on('click', (e) => {
+        if (e && e.originalEvent) {
+          L.DomEvent.stopPropagation(e);
+        }
         setSelectedFire(fire);
         fetchLocation(fire.lat, fire.lon).then(loc => {
           const el = document.getElementById(placeId);
@@ -718,6 +735,11 @@ export default function App() {
       });
 
       const marker = L.marker([targetPin.lat, targetPin.lng], { icon: cursorTargetIcon });
+      marker.on('click', (e) => {
+        if (e && e.originalEvent) {
+          L.DomEvent.stopPropagation(e);
+        }
+      });
 
       const popupContent = `
         <div style="font-family: inherit; font-size: 12px; min-width: 170px;">
@@ -1793,7 +1815,10 @@ export default function App() {
                       </span>
                     </div>
                     <button
-                      onClick={() => setSelectedFire(null)}
+                      onClick={() => {
+                        setSelectedFire(null);
+                        mapInstanceRef.current?.closePopup();
+                      }}
                       title="Close Inspector"
                       style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>
                       ✕
