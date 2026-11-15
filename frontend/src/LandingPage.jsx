@@ -2,70 +2,15 @@ import React from 'react';
 import {
   Flame,
   Globe,
-  Activity,
-  Layers,
   ArrowRight,
   Database,
-  Satellite,
-  Compass,
-  MapPin,
   Calendar,
   Sun,
-  Moon,
-  ExternalLink,
-  Sliders,
   Camera,
-  Crosshair,
-  Check,
-  Table,
-  FileText
+  Crosshair
 } from 'lucide-react';
 
 export default function LandingPage({ onLaunchApp, dateRange }) {
-  // Real dates directly queried from fires.db daily_summary table
-  const benchmarkDates = [
-    {
-      date: '2021-04-01',
-      spots: '18,566',
-      maxBrightness: '394.7 K',
-      avgBrightness: '329.8 K',
-      totalFrp: '130,788 MW',
-      note: 'Highest single-day active fire count recorded in the dataset'
-    },
-    {
-      date: '2021-11-10',
-      spots: '6,097',
-      maxBrightness: '367.0 K',
-      avgBrightness: '336.0 K',
-      totalFrp: '50,123 MW',
-      note: 'Post-monsoon seasonal agricultural residue burning peak'
-    },
-    {
-      date: '2022-05-01',
-      spots: '3,856',
-      maxBrightness: '385.5 K',
-      avgBrightness: '335.3 K',
-      totalFrp: '36,871 MW',
-      note: 'Early summer pre-monsoon dry season fire observations'
-    },
-    {
-      date: '2021-04-15',
-      spots: '2,286',
-      maxBrightness: '376.6 K',
-      avgBrightness: '325.5 K',
-      totalFrp: '19,904 MW',
-      note: 'Platform default observation date for map surveillance'
-    },
-    {
-      date: '2023-03-30',
-      spots: '1,603',
-      maxBrightness: '382.6 K',
-      avgBrightness: '334.8 K',
-      totalFrp: '18,685 MW',
-      note: 'Spring woodland and deciduous forest fire detections'
-    }
-  ];
-
   const features = [
     {
       icon: <Globe size={20} color="#ea580c" />,
@@ -97,18 +42,6 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
       title: 'Map Screenshot Export',
       desc: 'Direct PNG export of the current map extent and rendered hotspots using html-to-image for research notes and documentation.'
     }
-  ];
-
-  const schemaColumns = [
-    { name: 'latitude', type: 'REAL', desc: 'WGS-84 geographic latitude coordinate (6.5° N to 37.5° N)' },
-    { name: 'longitude', type: 'REAL', desc: 'WGS-84 geographic longitude coordinate (68.0° E to 97.5° E)' },
-    { name: 'brightness', type: 'REAL', desc: 'Brightness temperature of active fire pixel measured in Kelvin (K)' },
-    { name: 'frp', type: 'REAL', desc: 'Fire Radiative Power measured in Megawatts (MW)' },
-    { name: 'acq_date', type: 'TEXT', desc: 'Acquisition date of satellite observation (YYYY-MM-DD)' },
-    { name: 'acq_time', type: 'INTEGER', desc: 'Acquisition time in UTC (HHMM format)' },
-    { name: 'daynight', type: 'TEXT', desc: 'Diurnal overpass period: "D" for Daytime, "N" for Nighttime' },
-    { name: 'confidence_cat', type: 'TEXT', desc: 'Harmonized confidence classification: "l" (low), "n" (nominal), "h" (high)' },
-    { name: 'instrument', type: 'TEXT', desc: 'Sensor platform: "SNPP (SNPP)", "MODIS (Aqua)", or "MODIS (Terra)"' }
   ];
 
   const pipelineSteps = [
@@ -211,14 +144,8 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
           <a href="#features" style={{ color: '#475569', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
             Features
           </a>
-          <a href="#sample-dates" style={{ color: '#475569', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-            Observation Dates
-          </a>
           <a href="#pipeline" style={{ color: '#475569', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-            Pipeline
-          </a>
-          <a href="#schema" style={{ color: '#475569', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-            Data Schema
+            Processing Pipeline
           </a>
         </nav>
 
@@ -563,211 +490,15 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
         </div>
       </section>
 
-      {/* REAL SAMPLE DATES SECTION (VERIFIED FROM DATABASE) */}
-      <section id="sample-dates" style={{
-        backgroundColor: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
-        borderBottom: '1px solid #e2e8f0',
-        padding: '64px 24px'
-      }}>
-        <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
-          
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            marginBottom: '28px',
-            flexWrap: 'wrap',
-            gap: '16px'
-          }}>
-            <div>
-              <span style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                color: '#ea580c',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em'
-              }}>
-                Database Observations
-              </span>
-              <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '6px' }}>
-                Sample Observation Dates in Dataset
-              </h2>
-              <p style={{ fontSize: '14px', color: '#64748b', margin: 0, maxWidth: '640px' }}>
-                Exact statistics queried directly from the SQLite <code>daily_summary</code> table. Click any row to launch the map on that date.
-              </p>
-            </div>
-
-            <button
-              onClick={() => onLaunchApp('calendar')}
-              style={{
-                backgroundColor: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                padding: '8px 14px',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-              <Calendar size={14} color="#ea580c" />
-              Explore All 2,191 Dates in Heatmap
-            </button>
-          </div>
-
-          {/* Table of Real Dates */}
-          <div style={{
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Date</th>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Active Spots</th>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Peak Brightness</th>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Avg Brightness</th>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Total FRP</th>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Context</th>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px', textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {benchmarkDates.map((b, idx) => (
-                  <tr key={idx} style={{
-                    borderBottom: idx < benchmarkDates.length - 1 ? '1px solid #f1f5f9' : 'none',
-                    backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafafa'
-                  }}>
-                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
-                      {b.date}
-                    </td>
-                    <td style={{ padding: '12px 16px', fontWeight: 700, color: '#ea580c' }}>
-                      {b.spots}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>
-                      {b.maxBrightness}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>
-                      {b.avgBrightness}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#334155' }}>
-                      {b.totalFrp}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>
-                      {b.note}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => onLaunchApp('surveillance', b.date)}
-                        style={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #ea580c',
-                          color: '#ea580c',
-                          padding: '5px 10px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}>
-                        Load Map <ArrowRight size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-        </div>
-      </section>
-
       {/* DATA PIPELINE ARCHITECTURE (Directly matching repository scripts) */}
       <section id="pipeline" style={{
-        maxWidth: '1160px',
-        margin: '0 auto',
-        padding: '64px 24px'
-      }}>
-        <div style={{ marginBottom: '36px' }}>
-          <span style={{
-            fontSize: '11px',
-            fontWeight: 700,
-            color: '#ea580c',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em'
-          }}>
-            Data Engineering
-          </span>
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '8px' }}>
-            Pipeline & Processing Flow
-          </h2>
-          <p style={{ fontSize: '15px', color: '#64748b', margin: 0, maxWidth: '680px' }}>
-            The data pipeline transforms raw NASA FIRMS CSV archive and near-real-time files into an indexed SQLite database.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {pipelineSteps.map((step, idx) => (
-            <div
-              key={idx}
-              style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '18px 20px',
-                display: 'grid',
-                gridTemplateColumns: '40px 220px 1fr',
-                gap: '16px',
-                alignItems: 'center'
-              }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                backgroundColor: '#f1f5f9',
-                color: '#334155',
-                fontSize: '14px',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {step.step}
-              </div>
-
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
-                  {step.title}
-                </div>
-                <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#ea580c', marginTop: '2px' }}>
-                  {step.file}
-                </div>
-              </div>
-
-              <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
-                {step.desc}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* DATABASE SCHEMA & SENSOR SPECIFICATION */}
-      <section id="schema" style={{
         backgroundColor: '#ffffff',
         borderTop: '1px solid #e2e8f0',
         borderBottom: '1px solid #e2e8f0',
         padding: '64px 24px'
       }}>
         <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
-          
-          <div style={{ marginBottom: '28px' }}>
+          <div style={{ marginBottom: '36px' }}>
             <span style={{
               fontSize: '11px',
               fontWeight: 700,
@@ -775,110 +506,60 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
               textTransform: 'uppercase',
               letterSpacing: '0.06em'
             }}>
-              Reference
+              Data Engineering
             </span>
             <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '8px' }}>
-              SQLite Table Schema: <code style={{ fontSize: '22px', color: '#0f172a' }}>fires</code>
+              Pipeline & Processing Flow
             </h2>
-            <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-              Schema attributes in <code>data/processed/fires.db</code> populated by <code>prepare_db.py</code>:
+            <p style={{ fontSize: '15px', color: '#64748b', margin: 0, maxWidth: '680px' }}>
+              The data pipeline transforms raw NASA FIRMS CSV archive and near-real-time files into an indexed SQLite database.
             </p>
           </div>
 
-          <div style={{
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Column</th>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Data Type</th>
-                  <th style={{ padding: '12px 16px', color: '#475569', fontWeight: 700, fontSize: '12px' }}>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schemaColumns.map((col, idx) => (
-                  <tr key={idx} style={{
-                    borderBottom: idx < schemaColumns.length - 1 ? '1px solid #f1f5f9' : 'none',
-                    backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafafa'
-                  }}>
-                    <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontWeight: 600, color: '#ea580c' }}>
-                      {col.name}
-                    </td>
-                    <td style={{ padding: '10px 16px', fontFamily: 'monospace', color: '#64748b', fontSize: '12px' }}>
-                      {col.type}
-                    </td>
-                    <td style={{ padding: '10px 16px', color: '#334155' }}>
-                      {col.desc}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {pipelineSteps.map((step, idx) => (
+              <div
+                key={idx}
+                style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '18px 20px',
+                  display: 'grid',
+                  gridTemplateColumns: '40px 220px 1fr',
+                  gap: '16px',
+                  alignItems: 'center'
+                }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#334155',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {step.step}
+                </div>
 
-        </div>
-      </section>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                    {step.title}
+                  </div>
+                  <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#ea580c', marginTop: '2px' }}>
+                    {step.file}
+                  </div>
+                </div>
 
-      {/* QUICK LAUNCH CALLOUT */}
-      <section style={{
-        maxWidth: '1160px',
-        margin: '0 auto',
-        padding: '56px 24px',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          backgroundColor: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '10px',
-          padding: '40px 32px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
-        }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
-            Ready to explore satellite active fire detections?
-          </h2>
-          <p style={{ fontSize: '15px', color: '#64748b', maxWidth: '580px', margin: '0 auto 24px' }}>
-            Open the full-screen interactive surveillance map or explore the multi-year burning calendar.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-            <button
-              onClick={() => onLaunchApp('surveillance')}
-              style={{
-                backgroundColor: '#ea580c',
-                border: 'none',
-                color: '#ffffff',
-                padding: '11px 22px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-              <Flame size={16} />
-              Open Interactive Map
-            </button>
-            <button
-              onClick={() => onLaunchApp('calendar')}
-              style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                padding: '11px 20px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-              <Calendar size={15} color="#ea580c" />
-              Open Activity Calendar
-            </button>
+                <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+                  {step.desc}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -886,7 +567,6 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
       {/* FOOTER */}
       <footer style={{
         backgroundColor: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
         padding: '24px 32px',
         fontSize: '12px',
         color: '#64748b'
