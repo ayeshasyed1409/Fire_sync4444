@@ -18,7 +18,8 @@ import {
   Check,
   Home,
   Archive as ArchiveIcon,
-  Download
+  Download,
+  MapPin
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -26,7 +27,7 @@ import { toPng } from 'html-to-image';
 import ActivityCalendar from './ActivityCalendar.jsx';
 import LandingPage from './LandingPage.jsx';
 import ArchivePage from './ArchivePage.jsx';
-import { FIRE_TYPE_INFO, getFireTypeInfo, formatConfidence } from './fireTypes.js';
+import { FIRE_TYPE_INFO, getFireTypeInfo, formatConfidence, fetchLocation } from './fireTypes.js';
 
 // Fix default Leaflet icon assets
 delete L.Icon.Default.prototype._getIconUrl;
@@ -51,7 +52,28 @@ export default function App() {
   const [dateRange, setDateRange] = useState({ min_date: '2020-11-01', max_date: '2026-08-31', total_dates: 2126 });
   const [stats, setStats] = useState({ count: 0, maxBrightness: 0, avgBrightness: 0, totalFrp: 0 });
   const [selectedFire, setSelectedFire] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
   const [mapLayer, setMapLayer] = useState('satellite');
+
+  // Fetch geographic location (district, state, country) when a fire is selected
+  useEffect(() => {
+    if (selectedFire) {
+      setLoadingLocation(true);
+      setSelectedLocation(null);
+      fetchLocation(selectedFire.lat, selectedFire.lon)
+        .then(loc => {
+          setSelectedLocation(loc);
+          setLoadingLocation(false);
+        })
+        .catch(() => {
+          setLoadingLocation(false);
+        });
+    } else {
+      setSelectedLocation(null);
+      setLoadingLocation(false);
+    }
+  }, [selectedFire]);
 
   // Real-time cursor coordinates and map capture state
   const [cursorCoords, setCursorCoords] = useState({ lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1], active: false });
@@ -267,8 +289,10 @@ export default function App() {
       const confInfo = formatConfidence(fire.confidence, fire.confidence_cat);
       const typeInfo = getFireTypeInfo(fire.type);
 
+      const placeId = `popup-place-text-${Math.round(fire.lat * 1000)}_${Math.round(fire.lon * 1000)}`;
+
       const popupHtml = `
-        <div style="font-family: inherit; font-size: 13px; min-width: 220px;">
+        <div style="font-family: inherit; font-size: 13px; min-width: 230px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:6px;">
               <span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${fillColor};"></span>
@@ -289,6 +313,16 @@ export default function App() {
             </div>
           </div>
 
+          <!-- Geographic Place (District, State, Country) -->
+          <div style="margin-bottom:8px; padding:6px 8px; border-radius:6px; background:#070b14; border:1px solid rgba(255,255,255,0.08); font-size:11px;">
+            <div style="color:#ea580c; font-size:10px; font-weight:700; text-transform:uppercase;">
+              📍 Geographic Location
+            </div>
+            <div id="${placeId}" style="color:#f8fafc; font-weight:700; margin-top:2px; font-size:11px;">
+              Resolving place...
+            </div>
+          </div>
+
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size: 12px; color:#cbd5e1;">
             <div><strong>Location:</strong> ${fire.lat.toFixed(4)}° N, ${fire.lon.toFixed(4)}° E</div>
             <div><strong>Brightness:</strong> <span style="color:#fb923c; font-weight:700;">${fire.brightness} K</span></div>
@@ -305,7 +339,15 @@ export default function App() {
       `;
 
       circle.bindPopup(popupHtml);
-      circle.on('click', () => setSelectedFire(fire));
+      circle.on('click', () => {
+        setSelectedFire(fire);
+        fetchLocation(fire.lat, fire.lon).then(loc => {
+          const el = document.getElementById(placeId);
+          if (el && loc) {
+            el.innerHTML = `${loc.district ? `<strong>${loc.district}</strong>, ` : ''}${loc.state}, ${loc.country}`;
+          }
+        });
+      });
 
       // Dynamic hover interaction
       circle.on('mouseover', function () {
@@ -851,7 +893,7 @@ export default function App() {
           boxShadow: '-10px 0 35px rgba(0, 0, 0, 0.6)'
         }}>
 
-          {/* Sidebar Header (NO Overview button, NO Calendar tab) */}
+          {/* Sidebar Header */}
           <div style={{
             padding: '14px 18px',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
@@ -866,17 +908,6 @@ export default function App() {
                 Surveillance Controls
               </span>
             </div>
-            <span style={{
-              fontSize: '10px',
-              fontWeight: 700,
-              color: '#ea580c',
-              backgroundColor: 'rgba(234, 88, 12, 0.1)',
-              border: '1px solid rgba(234, 88, 12, 0.25)',
-              padding: '2px 8px',
-              borderRadius: '4px'
-            }}>
-              LIVE TELEMETRY
-            </span>
           </div>
 
           {/* Controls Body */}
@@ -987,38 +1018,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quick Benchmark Outbreak Days */}
-            <div>
-              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Key Fire Outbreak Benchmarks:
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '6px' }}>
-                {[
-                  { label: 'Apr 15, 2021', val: '2021-04-15' },
-                  { label: 'May 01, 2022', val: '2022-05-01' },
-                  { label: 'Nov 10, 2021', val: '2021-11-10' },
-                  { label: 'Mar 30, 2023', val: '2023-03-30' },
-                ].map(p => (
-                  <button
-                    key={p.val}
-                    onClick={() => setDate(p.val)}
-                    style={{
-                      background: date === p.val ? 'rgba(234, 88, 12, 0.2)' : '#070b14',
-                      border: `1px solid ${date === p.val ? '#ea580c' : 'rgba(255, 255, 255, 0.08)'}`,
-                      color: date === p.val ? '#ea580c' : '#94a3b8',
-                      padding: '5px 8px',
-                      borderRadius: '5px',
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Daily Metrics Grid */}
             <div style={{
               background: '#070b14',
@@ -1099,6 +1098,50 @@ export default function App() {
                       style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>
                       ✕
                     </button>
+                  </div>
+
+                  {/* Geographic Location (District, State, Country) */}
+                  <div style={{
+                    backgroundColor: '#070b14',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '8px',
+                    padding: '10px 12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <MapPin size={13} color="#ea580c" />
+                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Geographic Location
+                        </span>
+                      </div>
+                      {loadingLocation && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#ea580c' }}>
+                          <RefreshCw size={10} className="animate-spin" />
+                          <span>Resolving...</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '5px', fontSize: '11px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '3px' }}>
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>District:</span>
+                        <strong style={{ color: '#f8fafc' }}>
+                          {selectedLocation?.district || (loadingLocation ? 'Locating...' : 'Rural Sector')}
+                        </strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '3px' }}>
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>State:</span>
+                        <strong style={{ color: '#ea580c' }}>
+                          {selectedLocation?.state || (loadingLocation ? 'Locating...' : 'India Region')}
+                        </strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>Country:</span>
+                        <strong style={{ color: '#f8fafc' }}>
+                          {selectedLocation?.country || 'India'}
+                        </strong>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Classification Type Card */}
