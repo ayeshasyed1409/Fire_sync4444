@@ -19,7 +19,9 @@ import {
   Home,
   Archive as ArchiveIcon,
   Download,
-  MapPin
+  MapPin,
+  Square,
+  X
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -80,10 +82,15 @@ export default function App() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureStatus, setCaptureStatus] = useState(null); // 'success' | 'error' | null
 
+  // Spatial drawing & region filter state
+  const [selectedRegion, setSelectedRegion] = useState(null); // { minLat, maxLat, minLon, maxLon } | null
+  const [isDrawing, setIsDrawing] = useState(false);
+
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
   const selectionLayerRef = useRef(null);
+  const drawLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
 
   const handleLaunchMap = (targetDate = null) => {
@@ -129,6 +136,9 @@ export default function App() {
 
     const selectionGroup = L.layerGroup().addTo(map);
     selectionLayerRef.current = selectionGroup;
+
+    const drawGroup = L.layerGroup().addTo(map);
+    drawLayerRef.current = drawGroup;
 
     // Track live cursor coordinates on mousemove
     map.on('mousemove', (e) => {
@@ -210,25 +220,6 @@ export default function App() {
       .then(data => {
         const fireData = data.fires || [];
         setFires(fireData);
-
-        if (fireData.length > 0) {
-          let maxB = 0;
-          let sumB = 0;
-          let sumFrp = 0;
-          for (let f of fireData) {
-            if (f.brightness > maxB) maxB = f.brightness;
-            sumB += f.brightness;
-            sumFrp += f.frp || 0;
-          }
-          setStats({
-            count: fireData.length,
-            maxBrightness: maxB.toFixed(1),
-            avgBrightness: (sumB / fireData.length).toFixed(1),
-            totalFrp: sumFrp.toFixed(1)
-          });
-        } else {
-          setStats({ count: 0, maxBrightness: 0, avgBrightness: 0, totalFrp: 0 });
-        }
         setLoading(false);
       })
       .catch(err => {
@@ -237,6 +228,53 @@ export default function App() {
       });
   }, [date, daynight]);
 
+  // Filter hotspots based on spatial bounding box if selectedRegion is set
+  const displayedFires = React.useMemo(() => {
+    if (!selectedRegion) return fires;
+    return fires.filter(f =>
+      f.lat >= selectedRegion.minLat &&
+      f.lat <= selectedRegion.maxLat &&
+      f.lon >= selectedRegion.minLon &&
+      f.lon <= selectedRegion.maxLon
+    );
+  }, [fires, selectedRegion]);
+
+  // Recalculate daily stats whenever displayedFires changes
+  useEffect(() => {
+    if (displayedFires.length > 0) {
+      let maxB = 0;
+      let sumB = 0;
+      let sumFrp = 0;
+      for (let f of displayedFires) {
+        if (f.brightness > maxB) maxB = f.brightness;
+        sumB += f.brightness;
+        sumFrp += f.frp || 0;
+      }
+      setStats({
+        count: displayedFires.length,
+        maxBrightness: maxB.toFixed(1),
+        avgBrightness: (sumB / displayedFires.length).toFixed(1),
+        totalFrp: sumFrp.toFixed(1)
+      });
+    } else {
+      setStats({ count: 0, maxBrightness: 0, avgBrightness: 0, totalFrp: 0 });
+    }
+  }, [displayedFires]);
+
+  // Deselect inspected fire if it falls outside the selected region
+  useEffect(() => {
+    if (selectedFire && selectedRegion) {
+      if (
+        selectedFire.lat < selectedRegion.minLat ||
+        selectedFire.lat > selectedRegion.maxLat ||
+        selectedFire.lon < selectedRegion.minLon ||
+        selectedFire.lon > selectedRegion.maxLon
+      ) {
+        setSelectedFire(null);
+      }
+    }
+  }, [selectedRegion]);
+
   // Render Hotspot Markers
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
@@ -244,17 +282,17 @@ export default function App() {
     const layer = markersLayerRef.current;
     layer.clearLayers();
 
-    if (fires.length === 0) return;
+    if (displayedFires.length === 0) return;
 
     let minB = Infinity;
     let maxB = -Infinity;
-    for (let f of fires) {
+    for (let f of displayedFires) {
       if (f.brightness < minB) minB = f.brightness;
       if (f.brightness > maxB) maxB = f.brightness;
     }
     const bSpan = (maxB - minB) || 1;
 
-    fires.forEach((fire) => {
+    displayedFires.forEach((fire) => {
       const relBrightness = Math.max(0, Math.min(1, (fire.brightness - minB) / bSpan));
 
       // Color gradation: Yellow (moderate) -> Orange (high) -> Red (severe)
@@ -361,7 +399,7 @@ export default function App() {
 
       layer.addLayer(circle);
     });
-  }, [fires, date]);
+  }, [displayedFires, date]);
 
   // Pulse beacon for inspected / selected fire
   useEffect(() => {
@@ -391,6 +429,166 @@ export default function App() {
       layer.addLayer(centerDot);
     }
   }, [selectedFire]);
+
+  // Render drawn region bounding box
+  useEffect(() => {
+    if (!mapInstanceRef.current || !drawLayerRef.current) return;
+    const drawLayer = drawLayerRef.current;
+    drawLayer.clearLayers();
+
+    if (selectedRegion) {
+      const bounds = [
+        [selectedRegion.minLat, selectedRegion.minLon],
+        [selectedRegion.maxLat, selectedRegion.maxLon]
+      ];
+      const rect = L.rectangle(bounds, {
+        color: '#f97316',
+        weight: 2,
+        dashArray: '6, 6',
+        fillColor: '#ea580c',
+        fillOpacity: 0.14,
+        interactive: false
+      });
+      rect.addTo(drawLayer);
+    }
+  }, [selectedRegion]);
+
+  // Map interactive area drawing
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (!isDrawing) {
+      map.getContainer().style.cursor = '';
+      map.dragging.enable();
+      return;
+    }
+
+    map.getContainer().style.cursor = 'crosshair';
+    map.dragging.disable();
+
+    let startLatLng = null;
+    let tempRect = null;
+    let isMouseDown = false;
+
+    const onMouseDown = (e) => {
+      isMouseDown = true;
+      startLatLng = e.latlng;
+      if (tempRect) {
+        tempRect.remove();
+        tempRect = null;
+      }
+      tempRect = L.rectangle([startLatLng, startLatLng], {
+        color: '#ea580c',
+        weight: 2,
+        dashArray: '4, 4',
+        fillColor: '#ea580c',
+        fillOpacity: 0.2
+      }).addTo(map);
+    };
+
+    const onMouseMove = (e) => {
+      if (!isMouseDown || !startLatLng || !tempRect) return;
+      const bounds = L.latLngBounds(startLatLng, e.latlng);
+      tempRect.setBounds(bounds);
+    };
+
+    const onMouseUp = (e) => {
+      if (!isMouseDown || !startLatLng) return;
+      isMouseDown = false;
+      const endLatLng = e.latlng;
+
+      const minLat = Math.min(startLatLng.lat, endLatLng.lat);
+      const maxLat = Math.max(startLatLng.lat, endLatLng.lat);
+      const minLon = Math.min(startLatLng.lng, endLatLng.lng);
+      const maxLon = Math.max(startLatLng.lng, endLatLng.lng);
+
+      if (tempRect) {
+        tempRect.remove();
+        tempRect = null;
+      }
+
+      // Check if dragged box is meaningful (at least 0.02 degrees)
+      if (Math.abs(maxLat - minLat) > 0.02 && Math.abs(maxLon - minLon) > 0.02) {
+        setSelectedRegion({ minLat, maxLat, minLon, maxLon });
+        setIsDrawing(false);
+      }
+    };
+
+    map.on('mousedown', onMouseDown);
+    map.on('mousemove', onMouseMove);
+    map.on('mouseup', onMouseUp);
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (tempRect) tempRect.remove();
+        setIsDrawing(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      map.off('mousedown', onMouseDown);
+      map.off('mousemove', onMouseMove);
+      map.off('mouseup', onMouseUp);
+      window.removeEventListener('keydown', onKeyDown);
+      if (tempRect) tempRect.remove();
+      map.getContainer().style.cursor = '';
+      map.dragging.enable();
+    };
+  }, [isDrawing]);
+
+  // Export CSV exclusively for the drawn/selected region
+  const handleExportRegionCSV = () => {
+    if (!displayedFires || displayedFires.length === 0) {
+      alert("No fire hotspots found in this region to export.");
+      return;
+    }
+
+    const headers = [
+      'latitude',
+      'longitude',
+      'brightness',
+      'scan',
+      'track',
+      'acq_date',
+      'acq_time',
+      'instrument',
+      'confidence',
+      'frp',
+      'daynight',
+      'type'
+    ];
+
+    const rows = displayedFires.map(f => [
+      f.lat,
+      f.lon,
+      f.brightness,
+      f.scan ?? '',
+      f.track ?? '',
+      date,
+      String(f.time ?? '').padStart(4, '0'),
+      f.instrument ?? 'VIIRS',
+      f.confidence ?? '',
+      f.frp ?? '',
+      f.daynight ?? '',
+      f.type !== undefined ? f.type : ''
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const regionTag = selectedRegion
+      ? `_region_${selectedRegion.minLat.toFixed(2)}-${selectedRegion.maxLat.toFixed(2)}N`
+      : '';
+    link.setAttribute('download', `firesync_region_hotspots_${date}${regionTag}_${displayedFires.length}records.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Capture Screenshot of the Map
   const handleCaptureMap = async () => {
@@ -722,6 +920,112 @@ export default function App() {
                   </>
                 )}
               </button>
+
+              {/* Spatial Drawing & Region Export Tool */}
+              {isDrawing ? (
+                <button
+                  onClick={() => setIsDrawing(false)}
+                  title="Cancel area drawing"
+                  style={{
+                    background: '#ea580c',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '5px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    boxShadow: '0 0 12px rgba(234, 88, 12, 0.6)'
+                  }}>
+                  <Crosshair size={13} />
+                  <span>Drawing... (Cancel)</span>
+                </button>
+              ) : selectedRegion ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    onClick={() => setIsDrawing(true)}
+                    title="Redraw bounding area"
+                    style={{
+                      background: 'rgba(234, 88, 12, 0.15)',
+                      border: '1px solid #ea580c',
+                      color: '#f97316',
+                      borderRadius: '6px',
+                      padding: '5px 9px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer'
+                    }}>
+                    <Square size={12} />
+                    <span>Redraw</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedRegion(null)}
+                    title="Clear spatial filter and show all spots"
+                    style={{
+                      background: '#070b14',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#94a3b8',
+                      borderRadius: '6px',
+                      padding: '5px 8px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      cursor: 'pointer'
+                    }}>
+                    <X size={12} />
+                    <span>Clear</span>
+                  </button>
+                  <button
+                    onClick={handleExportRegionCSV}
+                    title="Export CSV for this region only"
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '5px 10px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                    }}>
+                    <Download size={12} />
+                    <span>Export Area ({displayedFires.length})</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsDrawing(true)}
+                  title="Draw a bounding rectangle on the map to filter and export data"
+                  style={{
+                    background: '#070b14',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: '#f8fafc',
+                    borderRadius: '6px',
+                    padding: '5px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  <Square size={13} color="#ea580c" />
+                  <span>Draw Area</span>
+                </button>
+              )}
             </>
           )}
 
@@ -852,6 +1156,46 @@ export default function App() {
         {/* Map Container */}
         <div style={{ flex: 1, position: 'relative', height: '100%' }}>
           <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+
+          {/* Floating Area Drawing Notification */}
+          {isDrawing && (
+            <div style={{
+              position: 'absolute',
+              top: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1000,
+              backgroundColor: 'rgba(12, 18, 29, 0.94)',
+              border: '1px solid #ea580c',
+              boxShadow: '0 8px 32px rgba(234, 88, 12, 0.45)',
+              borderRadius: '8px',
+              padding: '9px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              backdropFilter: 'blur(16px)',
+              pointerEvents: 'auto'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc', fontSize: '12px', fontWeight: 700 }}>
+                <Crosshair size={15} color="#ea580c" />
+                <span>Draw Mode Active: Click and drag across the map to select an area</span>
+              </div>
+              <button
+                onClick={() => setIsDrawing(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#f8fafc',
+                  borderRadius: '5px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}>
+                Cancel (Esc)
+              </button>
+            </div>
+          )}
 
           {/* Floating Brightness Legend on Map */}
           <div style={{
@@ -1017,6 +1361,158 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+            {/* Spatial Region Drawing & Filter Tool */}
+            {selectedRegion ? (
+              <div style={{
+                background: 'rgba(234, 88, 12, 0.08)',
+                border: '1px solid rgba(234, 88, 12, 0.35)',
+                borderRadius: '8px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Square size={14} color="#ea580c" />
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Spatial Region Filter
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedRegion(null)}
+                    title="Remove region filter"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#94a3b8',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '2px 4px'
+                    }}>
+                    <X size={12} /> Clear
+                  </button>
+                </div>
+
+                <div style={{
+                  background: '#070b14',
+                  borderRadius: '6px',
+                  padding: '8px 10px',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  fontSize: '11px',
+                  color: '#cbd5e1',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Lat Bounds:</span>
+                    <strong style={{ color: '#f8fafc' }}>{selectedRegion.minLat.toFixed(2)}° to {selectedRegion.maxLat.toFixed(2)}° N</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Lon Bounds:</span>
+                    <strong style={{ color: '#f8fafc' }}>{selectedRegion.minLon.toFixed(2)}° to {selectedRegion.maxLon.toFixed(2)}° E</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '4px', marginTop: '2px' }}>
+                    <span style={{ color: '#64748b' }}>Region Spots:</span>
+                    <strong style={{ color: '#ea580c' }}>{displayedFires.length} of {fires.length} ({((displayedFires.length / (fires.length || 1)) * 100).toFixed(1)}%)</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={handleExportRegionCSV}
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 10px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                    }}>
+                    <Download size={13} />
+                    <span>Export Region CSV</span>
+                  </button>
+                  <button
+                    onClick={() => setIsDrawing(true)}
+                    title="Redraw new bounding box"
+                    style={{
+                      background: '#070b14',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#cbd5e1',
+                      borderRadius: '6px',
+                      padding: '8px 10px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px'
+                    }}>
+                    <Square size={12} color="#ea580c" />
+                    <span>Redraw</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                background: '#070b14',
+                border: '1px dashed rgba(234, 88, 12, 0.4)',
+                borderRadius: '8px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <button
+                  onClick={() => setIsDrawing(true)}
+                  style={{
+                    width: '100%',
+                    background: isDrawing ? '#ea580c' : 'rgba(234, 88, 12, 0.12)',
+                    border: '1px solid #ea580c',
+                    color: isDrawing ? '#ffffff' : '#f97316',
+                    borderRadius: '6px',
+                    padding: '8px 12px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: isDrawing ? '0 0 12px rgba(234, 88, 12, 0.5)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  {isDrawing ? (
+                    <>
+                      <Crosshair size={13} />
+                      <span>Drawing Active &bull; Drag on Map</span>
+                    </>
+                  ) : (
+                    <>
+                      <Square size={13} />
+                      <span>Draw Area Filter on Map</span>
+                    </>
+                  )}
+                </button>
+                <div style={{ fontSize: '10px', color: '#64748b', textAlign: 'center', lineHeight: '1.4' }}>
+                  Select a custom area to isolate telemetry and export that region's CSV.
+                </div>
+              </div>
+            )}
 
             {/* Daily Metrics Grid */}
             <div style={{
