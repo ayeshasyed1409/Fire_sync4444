@@ -14,7 +14,7 @@ import {
   Layers,
   Sparkles
 } from 'lucide-react';
-import { FIRE_TYPE_INFO, getFireTypeInfo, formatConfidence } from './App.jsx';
+import { FIRE_TYPE_INFO, getFireTypeInfo, formatConfidence } from './fireTypes.js';
 
 export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
   const [startDate, setStartDate] = useState('2021-04-10');
@@ -43,8 +43,8 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
     { label: 'April 2021 (Full Month)', start: '2021-04-01', end: '2021-04-30' },
   ];
 
-  // Fetch summary and preview data when filters change
-  const fetchSummary = () => {
+  // Fetch summary and preview data with automatic fallback
+  const fetchSummary = async () => {
     if (!startDate || !endDate) return;
     setLoading(true);
 
@@ -56,24 +56,94 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
       type: fireType
     });
 
-    fetch(`/api/archive/summary?${params.toString()}`)
-      .then(res => res.json())
-      .then(data => {
-        setSummary(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Error fetching archive summary:", err);
-        setLoading(false);
+    try {
+      const res = await fetch(`/api/archive/summary?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data.count === 'number') {
+          setSummary({
+            count: data.count || 0,
+            avg_brightness: data.avg_brightness || 0,
+            max_brightness: data.max_brightness || 0,
+            total_frp: data.total_frp || 0,
+            preview: Array.isArray(data.preview) ? data.preview : []
+          });
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Backend /api/archive/summary not available, attempting fallback:", err);
+    }
+
+    // Client-side fallback via /api/calendar & /api/fires
+    try {
+      const startYear = startDate.slice(0, 4);
+      const endYear = endDate.slice(0, 4);
+      const calRes = await fetch(`/api/calendar?year=${startYear}`);
+      const calData = await calRes.json();
+      
+      let filtered = Array.isArray(calData) ? calData.filter(d => d.date >= startDate && d.date <= endDate) : [];
+      
+      if (startYear !== endYear) {
+        const calRes2 = await fetch(`/api/calendar?year=${endYear}`);
+        const calData2 = await calRes2.json();
+        if (Array.isArray(calData2)) {
+          filtered = filtered.concat(calData2.filter(d => d.date >= startDate && d.date <= endDate));
+        }
+      }
+
+      const totalCount = filtered.reduce((acc, d) => acc + (d.count || 0), 0);
+      const maxB = filtered.reduce((acc, d) => Math.max(acc, d.max_b || 0), 0);
+      const totalF = filtered.reduce((acc, d) => acc + (d.frp || 0), 0);
+      const avgB = filtered.length > 0 
+        ? Math.round(filtered.reduce((acc, d) => acc + (d.avg_b || 0), 0) / filtered.length * 10) / 10 
+        : 0;
+
+      let previewRows = [];
+      try {
+        const fireRes = await fetch(`/api/fires?date=${startDate}`);
+        const fireData = await fireRes.json();
+        if (fireData && Array.isArray(fireData.fires)) {
+          previewRows = fireData.fires.slice(0, 15).map(f => ({
+            acq_date: startDate,
+            acq_time: f.time,
+            latitude: f.lat,
+            longitude: f.lon,
+            brightness: f.brightness,
+            frp: f.frp,
+            instrument: f.instrument,
+            daynight: f.daynight,
+            confidence: f.confidence,
+            type: f.type,
+            confidence_cat: f.confidence_cat
+          }));
+        }
+      } catch (e) {
+        // ignore preview errors
+      }
+
+      setSummary({
+        count: totalCount,
+        avg_brightness: avgB,
+        max_brightness: maxB,
+        total_frp: Math.round(totalF * 10) / 10,
+        preview: previewRows
       });
+    } catch (fallbackErr) {
+      console.error("Fallback summary failed:", fallbackErr);
+      setSummary({ count: 0, avg_brightness: 0, max_brightness: 0, total_frp: 0, preview: [] });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchSummary();
   }, [startDate, endDate, daynight, sensor, fireType]);
 
-  // Handle CSV Export
-  const handleExportCSV = () => {
+  // Handle CSV Export with fallback
+  const handleExportCSV = async () => {
     if (!startDate || !endDate || isExporting) return;
     setIsExporting(true);
     setExportSuccess(false);
@@ -92,20 +162,101 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
 
     const exportUrl = `/api/export?${params.toString()}`;
 
-    // Create an invisible anchor to trigger direct browser file download
-    const link = document.createElement('a');
-    link.href = exportUrl;
-    link.setAttribute('download', `firesync_archive_${startDate.replace(/-/g, '')}_${endDate.replace(/-/g, '')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const res = await fetch(exportUrl);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `firesync_archive_${startDate.replace(/-/g, '')}_${endDate.replace(/-/g, '')}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
 
-    setTimeout(() => {
+        setIsExporting(false);
+        setExportSuccess(true);
+        setTimeout(() => setExportSuccess(false), 4000);
+        return;
+      }
+    } catch (e) {
+      console.warn("Backend /api/export unavailable, falling back to client-side CSV generation:", e);
+    }
+
+    // Client-side fallback: Fetch dates and build CSV
+    try {
+      let datesToFetch = [startDate];
+      if (startDate !== endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const cur = new Date(start);
+        datesToFetch = [];
+        while (cur <= end && datesToFetch.length < 31) {
+          datesToFetch.push(cur.toISOString().slice(0, 10));
+          cur.setDate(cur.getDate() + 1);
+        }
+      }
+
+      let allFires = [];
+      for (const d of datesToFetch) {
+        try {
+          const res = await fetch(`/api/fires?date=${d}&daynight=${daynight}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.fires)) {
+              allFires.push(...data.fires.map(f => ({ ...f, acq_date: d })));
+            }
+          }
+        } catch (err) {
+          // ignore single day error
+        }
+      }
+
+      if (sensor !== 'ALL') {
+        allFires = allFires.filter(f => (f.instrument || '').includes(sensor));
+      }
+      if (fireType !== 'ALL') {
+        allFires = allFires.filter(f => String(f.type) === String(fireType));
+      }
+
+      if (rowLimit && rowLimit !== 'ALL') {
+        allFires = allFires.slice(0, parseInt(rowLimit, 10));
+      }
+
+      const csvRows = [
+        "latitude,longitude,brightness,scan,track,acq_date,acq_time,instrument,confidence,frp,daynight,type"
+      ];
+      for (const f of allFires) {
+        csvRows.push(`${f.lat},${f.lon},${f.brightness},,,${f.acq_date},${f.time},${f.instrument},${f.confidence},${f.frp},${f.daynight},${f.type ?? -1}`);
+      }
+
+      const blob = new Blob([csvRows.join("\r\n")], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `firesync_archive_${startDate.replace(/-/g, '')}_${endDate.replace(/-/g, '')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
       setIsExporting(false);
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 4000);
-    }, 1200);
+    } catch (err) {
+      console.error("Client CSV export fallback failed:", err);
+      setIsExporting(false);
+      alert("Failed to export CSV. Please ensure the backend server is running.");
+    }
   };
+
+  const totalCount = Number(summary?.count || 0);
+  const maxBrightness = Number(summary?.max_brightness || 0);
+  const avgBrightness = Number(summary?.avg_brightness || 0);
+  const totalFrp = Number(summary?.total_frp || 0);
+  const previewRows = Array.isArray(summary?.preview) ? summary.preview : [];
 
   return (
     <div style={{
@@ -394,7 +545,7 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
 
             <button
               onClick={handleExportCSV}
-              disabled={isExporting || summary.count === 0}
+              disabled={isExporting || totalCount === 0}
               style={{
                 backgroundColor: exportSuccess ? '#15803d' : '#ea580c',
                 border: 'none',
@@ -403,12 +554,12 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
                 borderRadius: '6px',
                 fontSize: '13px',
                 fontWeight: 800,
-                cursor: isExporting || summary.count === 0 ? 'not-allowed' : 'pointer',
+                cursor: isExporting || totalCount === 0 ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 boxShadow: exportSuccess ? '0 2px 10px rgba(34, 197, 94, 0.4)' : '0 2px 10px rgba(234, 88, 12, 0.4)',
-                opacity: summary.count === 0 ? 0.5 : 1,
+                opacity: totalCount === 0 ? 0.5 : 1,
                 transition: 'all 0.2s'
               }}>
               {isExporting ? (
@@ -424,7 +575,7 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
               ) : (
                 <>
                   <Download size={15} />
-                  Export {summary.count ? summary.count.toLocaleString() : 0} Rows as CSV
+                  Export {totalCount > 0 ? totalCount.toLocaleString() : 0} Rows as CSV
                 </>
               )}
             </button>
@@ -440,7 +591,7 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
               Matching Hotspots
             </div>
             <div style={{ fontSize: '26px', fontWeight: 800, color: '#ea580c', marginTop: '4px' }}>
-              {loading ? '--' : summary.count.toLocaleString()}
+              {loading ? '--' : totalCount.toLocaleString()}
             </div>
             <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
               From {startDate} to {endDate}
@@ -452,7 +603,7 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
               Peak Thermal Brightness
             </div>
             <div style={{ fontSize: '26px', fontWeight: 800, color: '#f8fafc', marginTop: '4px' }}>
-              {loading ? '--' : (summary.max_brightness || 0)} <span style={{ fontSize: '14px', color: '#64748b' }}>K</span>
+              {loading ? '--' : maxBrightness} <span style={{ fontSize: '14px', color: '#64748b' }}>K</span>
             </div>
             <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
               Highest intensity detection
@@ -464,7 +615,7 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
               Average Brightness
             </div>
             <div style={{ fontSize: '26px', fontWeight: 800, color: '#cbd5e1', marginTop: '4px' }}>
-              {loading ? '--' : (summary.avg_brightness || 0)} <span style={{ fontSize: '14px', color: '#64748b' }}>K</span>
+              {loading ? '--' : avgBrightness} <span style={{ fontSize: '14px', color: '#64748b' }}>K</span>
             </div>
             <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
               Across selected observations
@@ -476,7 +627,7 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
               Cumulative FRP
             </div>
             <div style={{ fontSize: '26px', fontWeight: 800, color: '#cbd5e1', marginTop: '4px' }}>
-              {loading ? '--' : Number(summary.total_frp || 0).toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b' }}>MW</span>
+              {loading ? '--' : totalFrp.toLocaleString()} <span style={{ fontSize: '14px', color: '#64748b' }}>MW</span>
             </div>
             <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
               Total Fire Radiative Power
@@ -498,7 +649,7 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FileSpreadsheet size={16} color="#ea580c" />
               <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                Query Preview (First 15 Rows)
+                Query Preview (Sample Records)
               </span>
             </div>
 
@@ -525,8 +676,8 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
                 </tr>
               </thead>
               <tbody>
-                {summary.preview && summary.preview.length > 0 ? (
-                  summary.preview.map((row, idx) => {
+                {previewRows.length > 0 ? (
+                  previewRows.map((row, idx) => {
                     const typeInfo = getFireTypeInfo(row.type);
                     const confInfo = formatConfidence(row.confidence, row.confidence_cat);
 
@@ -538,25 +689,25 @@ export default function ArchivePage({ onLaunchMap, defaultDateRange }) {
                           backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)'
                         }}>
                         <td style={{ padding: '10px 14px', fontWeight: 700, color: '#f8fafc', fontFamily: 'monospace' }}>
-                          {row.acq_date}
+                          {row.acq_date || startDate}
                         </td>
                         <td style={{ padding: '10px 14px', color: '#cbd5e1', fontFamily: 'monospace' }}>
-                          {String(row.acq_time).padStart(4, '0')}
+                          {row.acq_time != null ? String(row.acq_time).padStart(4, '0') : '--'}
                         </td>
                         <td style={{ padding: '10px 14px', color: '#cbd5e1', fontFamily: 'monospace' }}>
-                          {row.latitude.toFixed(4)}° N
+                          {row.latitude != null ? `${Number(row.latitude).toFixed(4)}° N` : '--'}
                         </td>
                         <td style={{ padding: '10px 14px', color: '#cbd5e1', fontFamily: 'monospace' }}>
-                          {row.longitude.toFixed(4)}° E
+                          {row.longitude != null ? `${Number(row.longitude).toFixed(4)}° E` : '--'}
                         </td>
                         <td style={{ padding: '10px 14px', fontWeight: 700, color: '#ea580c', fontFamily: 'monospace' }}>
-                          {row.brightness}
+                          {row.brightness != null ? row.brightness : '--'}
                         </td>
                         <td style={{ padding: '10px 14px', color: '#cbd5e1', fontFamily: 'monospace' }}>
-                          {row.frp}
+                          {row.frp != null ? row.frp : '--'}
                         </td>
                         <td style={{ padding: '10px 14px', color: '#cbd5e1' }}>
-                          {row.instrument}
+                          {row.instrument || 'MODIS/VIIRS'}
                         </td>
                         <td style={{ padding: '10px 14px' }}>
                           <span style={{
