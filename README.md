@@ -61,6 +61,10 @@ NASA's Fire Information for Resource Management System (FIRMS) provides active f
 - Built with React 19, Leaflet, Vite, and Lucide React.
 - **Live Surveillance Map**:
   - Visualizes active fire locations sized and colored by radiant brightness in Kelvin (Amber $\rightarrow$ Orange $\rightarrow$ Red).
+  - **Sensor Layer Toggling**: Allows switching between individual and unified satellite data streams:
+    - **Harmonized Layer**: Combines both MODIS and VIIRS records seamlessly into a single, unified view with spatial deduplication applied.
+    - **MODIS Data Layer**: Displays thermal anomaly detections exclusively from Terra and Aqua satellites (coarser 1 km resolution, extensive historical record back to 2000).
+    - **VIIRS Data Layer**: Displays detections exclusively from Suomi-NPP and NOAA satellites (higher 375 m resolution, better for smaller fires).
   - **Draw Area Tool**: Users click and drag a rectangular bounding box on the map to filter hotspots and export that specific region's data as a CSV.
   - **Coordinate Navigation HUD**: Direct editable `LAT` and `LON` input fields in the top navbar. Entering coordinates flies the camera to the point and drops an animated target crosshair pin.
   - **Click-Away Deselection**: Clicking on the map clears inspected points and target coordinate pins without removing the drawn region.

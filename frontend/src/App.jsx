@@ -57,6 +57,7 @@ export default function App() {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [mapLayer, setMapLayer] = useState('satellite');
+  const [sensorLayer, setSensorLayer] = useState('HARMONIZED'); // 'HARMONIZED' | 'MODIS' | 'VIIRS'
 
   // Fetch geographic location (district, state, country) when a fire is selected
   useEffect(() => {
@@ -252,16 +253,42 @@ export default function App() {
       });
   }, [date, daynight]);
 
-  // Filter hotspots based on spatial bounding box if selectedRegion is set
+  // Filter hotspots based on spatial bounding box and active sensor layer
   const displayedFires = React.useMemo(() => {
-    if (!selectedRegion) return fires;
-    return fires.filter(f =>
-      f.lat >= selectedRegion.minLat &&
-      f.lat <= selectedRegion.maxLat &&
-      f.lon >= selectedRegion.minLon &&
-      f.lon <= selectedRegion.maxLon
-    );
-  }, [fires, selectedRegion]);
+    let list = fires;
+    if (selectedRegion) {
+      list = list.filter(f =>
+        f.lat >= selectedRegion.minLat &&
+        f.lat <= selectedRegion.maxLat &&
+        f.lon >= selectedRegion.minLon &&
+        f.lon <= selectedRegion.maxLon
+      );
+    }
+    if (sensorLayer === 'MODIS') {
+      list = list.filter(f => f.instrument && f.instrument.toUpperCase().includes('MODIS'));
+    } else if (sensorLayer === 'VIIRS') {
+      list = list.filter(f => f.instrument && (f.instrument.toUpperCase().includes('VIIRS') || f.instrument.toUpperCase().includes('SNPP')));
+    }
+    return list;
+  }, [fires, selectedRegion, sensorLayer]);
+
+  // Compute breakdown of sensor streams for current observation date
+  const sensorCounts = React.useMemo(() => {
+    let modis = 0;
+    let viirs = 0;
+    for (let f of fires) {
+      if (f.instrument && f.instrument.toUpperCase().includes('MODIS')) {
+        modis++;
+      } else {
+        viirs++;
+      }
+    }
+    return {
+      harmonized: fires.length,
+      modis,
+      viirs
+    };
+  }, [fires]);
 
   // Recalculate daily stats whenever displayedFires changes
   useEffect(() => {
@@ -285,19 +312,16 @@ export default function App() {
     }
   }, [displayedFires]);
 
-  // Deselect inspected fire if it falls outside the selected region
+  // Deselect inspected fire if it falls outside the selected region or active sensor layer
   useEffect(() => {
-    if (selectedFire && selectedRegion) {
-      if (
-        selectedFire.lat < selectedRegion.minLat ||
-        selectedFire.lat > selectedRegion.maxLat ||
-        selectedFire.lon < selectedRegion.minLon ||
-        selectedFire.lon > selectedRegion.maxLon
-      ) {
+    if (selectedFire) {
+      const stillVisible = displayedFires.some(f => f.lat === selectedFire.lat && f.lon === selectedFire.lon && f.time === selectedFire.time);
+      if (!stillVisible) {
         setSelectedFire(null);
+        mapInstanceRef.current?.closePopup();
       }
     }
-  }, [selectedRegion]);
+  }, [displayedFires, selectedFire]);
 
   // Render Hotspot Markers
   useEffect(() => {
@@ -1051,6 +1075,81 @@ export default function App() {
                 )}
               </form>
 
+              {/* Sensor Layer Switcher */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: '#070b14',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '6px',
+                padding: '2px',
+                gap: '2px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setSensorLayer('HARMONIZED')}
+                  title="Harmonized Layer: Combines both MODIS and VIIRS records seamlessly into a single, unified view"
+                  style={{
+                    background: sensorLayer === 'HARMONIZED' ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'transparent',
+                    color: sensorLayer === 'HARMONIZED' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  <Layers size={11} />
+                  <span>Harmonized</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSensorLayer('MODIS')}
+                  title="MODIS Data Layer: Shows thermal anomaly detections from Terra and Aqua satellites (coarser 1 km resolution, extensive historical record back to 2000)"
+                  style={{
+                    background: sensorLayer === 'MODIS' ? '#0284c7' : 'transparent',
+                    color: sensorLayer === 'MODIS' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  <span>MODIS</span>
+                  <span style={{ fontSize: '9px', opacity: 0.8 }}>(1km)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSensorLayer('VIIRS')}
+                  title="VIIRS Data Layer: Shows detections from Suomi-NPP and NOAA satellites (higher 375 m resolution, better for smaller fires)"
+                  style={{
+                    background: sensorLayer === 'VIIRS' ? '#16a34a' : 'transparent',
+                    color: sensorLayer === 'VIIRS' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  <span>VIIRS</span>
+                  <span style={{ fontSize: '9px', opacity: 0.8 }}>(375m)</span>
+                </button>
+              </div>
+
               {/* Basemap Switcher */}
               <div style={{
                 display: 'flex',
@@ -1448,6 +1547,15 @@ export default function App() {
               }} />
               <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700 }}>Severe (&gt;375K)</span>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '10px' }}>
+              <span style={{ color: '#64748b' }}>Active Stream:</span>
+              <span style={{
+                color: sensorLayer === 'HARMONIZED' ? '#ea580c' : sensorLayer === 'MODIS' ? '#38bdf8' : '#22c55e',
+                fontWeight: 700
+              }}>
+                {sensorLayer === 'HARMONIZED' ? 'Harmonized (Unified)' : sensorLayer === 'MODIS' ? 'MODIS (Terra & Aqua • 1km)' : 'VIIRS (Suomi-NPP • 375m)'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -1584,6 +1692,137 @@ export default function App() {
                     transition: 'all 0.15s'
                   }}>
                   <Moon size={13} /> Night
+                </button>
+              </div>
+            </div>
+
+            {/* Satellite Sensor Streams / Layer Switcher */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Satellite Sensor Stream
+                </label>
+                <span style={{ fontSize: '10px', color: '#ea580c', fontWeight: 700 }}>
+                  {sensorLayer === 'HARMONIZED' ? 'Unified View' : sensorLayer === 'MODIS' ? 'MODIS 1km' : 'VIIRS 375m'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {/* 1. Harmonized Layer */}
+                <button
+                  type="button"
+                  onClick={() => setSensorLayer('HARMONIZED')}
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: '7px',
+                    border: sensorLayer === 'HARMONIZED' ? '1px solid #ea580c' : '1px solid rgba(255, 255, 255, 0.08)',
+                    background: sensorLayer === 'HARMONIZED' ? 'rgba(234, 88, 12, 0.14)' : '#070b14',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Layers size={14} color={sensorLayer === 'HARMONIZED' ? '#ea580c' : '#94a3b8'} />
+                      <strong style={{ fontSize: '12px', color: sensorLayer === 'HARMONIZED' ? '#f8fafc' : '#cbd5e1' }}>
+                        Harmonized Layer
+                      </strong>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', marginLeft: '20px' }}>
+                      Unified MODIS & VIIRS with spatial deduplication
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: sensorLayer === 'HARMONIZED' ? '#ea580c' : '#94a3b8',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {sensorCounts.harmonized.toLocaleString()}
+                  </span>
+                </button>
+
+                {/* 2. MODIS Data Layer */}
+                <button
+                  type="button"
+                  onClick={() => setSensorLayer('MODIS')}
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: '7px',
+                    border: sensorLayer === 'MODIS' ? '1px solid #0284c7' : '1px solid rgba(255, 255, 255, 0.08)',
+                    background: sensorLayer === 'MODIS' ? 'rgba(2, 132, 199, 0.14)' : '#070b14',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Globe size={14} color={sensorLayer === 'MODIS' ? '#38bdf8' : '#94a3b8'} />
+                      <strong style={{ fontSize: '12px', color: sensorLayer === 'MODIS' ? '#f8fafc' : '#cbd5e1' }}>
+                        MODIS Data Layer
+                      </strong>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', marginLeft: '20px' }}>
+                      Terra & Aqua &bull; 1 km coarser resolution
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: sensorLayer === 'MODIS' ? '#38bdf8' : '#94a3b8',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {sensorCounts.modis.toLocaleString()}
+                  </span>
+                </button>
+
+                {/* 3. VIIRS Data Layer */}
+                <button
+                  type="button"
+                  onClick={() => setSensorLayer('VIIRS')}
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: '7px',
+                    border: sensorLayer === 'VIIRS' ? '1px solid #16a34a' : '1px solid rgba(255, 255, 255, 0.08)',
+                    background: sensorLayer === 'VIIRS' ? 'rgba(22, 163, 74, 0.14)' : '#070b14',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={14} color={sensorLayer === 'VIIRS' ? '#22c55e' : '#94a3b8'} />
+                      <strong style={{ fontSize: '12px', color: sensorLayer === 'VIIRS' ? '#f8fafc' : '#cbd5e1' }}>
+                        VIIRS Data Layer
+                      </strong>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', marginLeft: '20px' }}>
+                      Suomi-NPP & NOAA &bull; 375 m high resolution
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    color: sensorLayer === 'VIIRS' ? '#22c55e' : '#94a3b8',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {sensorCounts.viirs.toLocaleString()}
+                  </span>
                 </button>
               </div>
             </div>
