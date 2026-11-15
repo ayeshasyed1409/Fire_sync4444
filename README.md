@@ -31,6 +31,8 @@ A high-performance geospatial analytics and monitoring platform that ingests, cl
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx         # React UI, Leaflet map, and Control Panel
+│   │   ├── LandingPage.jsx # Immersive high-tech Landing Page & Outbreak Archive
+│   │   ├── ActivityCalendar.jsx # Spatiotemporal multi-year burning activity calendar
 │   │   ├── main.jsx        # React application entry point
 │   │   └── index.css       # Dark-theme styling and pulse animations
 │   ├── index.html          # HTML shell

@@ -12,11 +12,14 @@ import {
   Globe,
   Eye,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  ArrowLeft,
+  Home
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import ActivityCalendar from './ActivityCalendar.jsx';
+import LandingPage from './LandingPage.jsx';
 
 // Fix default Leaflet icon assets
 delete L.Icon.Default.prototype._getIconUrl;
@@ -33,6 +36,7 @@ const INITIAL_BOUNDS = [
 ];
 
 export default function App() {
+  const [view, setView] = useState('landing'); // 'landing' | 'app'
   const [activeTab, setActiveTab] = useState('surveillance'); // 'surveillance' | 'calendar'
   const [date, setDate] = useState('2021-04-15');
   const [daynight, setDaynight] = useState('ALL');
@@ -47,6 +51,29 @@ export default function App() {
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
+
+  const handleLaunchApp = (tab = 'surveillance', targetDate = null) => {
+    if (targetDate) {
+      setDate(targetDate);
+    }
+    if (tab) {
+      setActiveTab(tab);
+    }
+    setView('app');
+    if (mapInstanceRef.current) {
+      setTimeout(() => {
+        mapInstanceRef.current.invalidateSize();
+      }, 50);
+    }
+  };
+
+  useEffect(() => {
+    if (view === 'app' && mapInstanceRef.current) {
+      setTimeout(() => {
+        mapInstanceRef.current.invalidateSize();
+      }, 50);
+    }
+  }, [view]);
 
   // Initialize Map
   useEffect(() => {
@@ -220,7 +247,24 @@ export default function App() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', backgroundColor: '#06090e', overflow: 'hidden' }}>
+    <>
+      {view === 'landing' && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+          <LandingPage 
+            onLaunchApp={handleLaunchApp} 
+            dateRange={dateRange} 
+          />
+        </div>
+      )}
+
+      <div style={{
+        display: 'flex',
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: '#06090e',
+        overflow: 'hidden',
+        visibility: view === 'landing' ? 'hidden' : 'visible'
+      }}>
       
       {/* LEFT: MAP SURVEILLANCE VIEW */}
       <div style={{ flex: 1, position: 'relative', height: '100%' }}>
@@ -277,6 +321,27 @@ export default function App() {
               Global Active Fire Surveillance & Harmonization
             </p>
           </div>
+
+          <button
+            onClick={() => setView('landing')}
+            title="Return to Landing Page Overview"
+            style={{
+              marginLeft: '8px',
+              padding: '6px 12px',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '7px',
+              color: '#cbd5e1',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}>
+            <ArrowLeft size={13} color="#f97316" /> Landing Page
+          </button>
         </div>
 
         {/* Map View Mode Controls */}
@@ -425,6 +490,28 @@ export default function App() {
             }}>
             <CalendarIcon size={16} color={activeTab === 'calendar' ? '#f97316' : '#64748b'} />
             Burning Activity Calendar
+          </button>
+
+          <button
+            onClick={() => setView('landing')}
+            title="Return to Landing Page"
+            style={{
+              marginLeft: 'auto',
+              marginBottom: '8px',
+              padding: '6px 12px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '6px',
+              color: '#94a3b8',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'all 0.15s'
+            }}>
+            <Home size={12} color="#f97316" /> Overview
           </button>
         </div>
 
@@ -669,5 +756,6 @@ export default function App() {
       </div>
 
     </div>
+    </>
   );
 }
