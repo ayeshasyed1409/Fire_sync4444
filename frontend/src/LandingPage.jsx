@@ -52,39 +52,6 @@ export default function LandingPage({ onLaunchApp }) {
     }
   ];
 
-  const pipelineSteps = [
-    {
-      step: '1',
-      file: 'clean_data.py',
-      title: 'Boundary Filter & Normalization',
-      desc: 'Reads raw MODIS and VIIRS CSV files, filters coordinates to India bounding box (6.5–37.5° N, 68.0–97.5° E), handles missing FRP values, and maps MODIS numeric confidence percentages to categories (l, n, h).'
-    },
-    {
-      step: '2',
-      file: 'harmonize_data.py',
-      title: 'Spatial Grid Deduplication',
-      desc: 'Merges cleaned datasets and groups observations into ~1.1 km² spatial grid cells (rounded to 2 decimal places). Deduplicates records sharing the same cell and acquisition date, keeping the detection with the highest FRP.'
-    },
-    {
-      step: '3',
-      file: 'merge_col.py',
-      title: 'Satellite Metadata Standardization',
-      desc: 'Harmonizes sensor labels into standardized instrument tags: MODIS (Aqua), MODIS (Terra), and SNPP (SNPP) for consistent querying.'
-    },
-    {
-      step: '4',
-      file: 'prepare_db.py',
-      title: 'Indexed SQLite Storage',
-      desc: 'Inserts 3,285,447 rows into data/processed/fires.db, builds a composite B-tree index on (acq_date, daynight), and creates the pre-aggregated daily_summary table for instant calendar loading.'
-    },
-    {
-      step: '5',
-      file: 'server.py',
-      title: 'Zero-Dependency API Server',
-      desc: 'Lightweight Python http.server module serving /api/fires, /api/dates, /api/calendar, and /api/monthly directly from SQLite with sub-15ms response latency.'
-    }
-  ];
-
   return (
     <div style={{
       width: '100%',
@@ -408,80 +375,6 @@ export default function LandingPage({ onLaunchApp }) {
               </p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* DATA PIPELINE ARCHITECTURE */}
-      <section style={{
-        backgroundColor: '#0b1122',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        padding: '64px 24px'
-      }}>
-        <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '36px' }}>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: 700,
-              color: '#ea580c',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em'
-            }}>
-              Data Engineering
-            </span>
-            <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#f8fafc', marginTop: '6px', marginBottom: '8px' }}>
-              Pipeline & Processing Flow
-            </h2>
-            <p style={{ fontSize: '15px', color: '#94a3b8', margin: 0, maxWidth: '680px' }}>
-              The data pipeline transforms raw NASA FIRMS CSV archive and near-real-time files into an indexed SQLite database.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {pipelineSteps.map((step, idx) => (
-              <div
-                key={idx}
-                style={{
-                  backgroundColor: '#0d1527',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '10px',
-                  padding: '18px 20px',
-                  display: 'grid',
-                  gridTemplateColumns: '40px 220px 1fr',
-                  gap: '16px',
-                  alignItems: 'center'
-                }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#cbd5e1',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {step.step}
-                </div>
-
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>
-                    {step.title}
-                  </div>
-                  <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#ea580c', marginTop: '2px' }}>
-                    {step.file}
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5 }}>
-                  {step.desc}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
