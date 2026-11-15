@@ -47,6 +47,8 @@ pnpm-debug.log*
 data/raw/*.csv
 data/processed/*.csv
 data/processed/*.db
+*.zip
+data.zip
 
 # IDE & OS files
 .vscode/
