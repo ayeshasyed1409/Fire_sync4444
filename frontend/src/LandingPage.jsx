@@ -8,7 +8,9 @@ import {
   Sun,
   Camera,
   Crosshair,
-  Satellite
+  Satellite,
+  Archive as ArchiveIcon,
+  Download
 } from 'lucide-react';
 
 export default function LandingPage({ onLaunchApp }) {
@@ -42,6 +44,11 @@ export default function LandingPage({ onLaunchApp }) {
       icon: <Camera size={20} color="#ea580c" />,
       title: 'Map Screenshot Export',
       desc: 'Direct PNG export of the current map extent and rendered hotspots using html-to-image for research notes and documentation.'
+    },
+    {
+      icon: <ArchiveIcon size={20} color="#ea580c" />,
+      title: 'Data Archive & CSV Export',
+      desc: 'Filter observations by custom date spans, satellite sensors, and fire classification types (0, 1, 2, 3, -1) to download complete CSV subsets.'
     }
   ];
 
@@ -174,6 +181,25 @@ export default function LandingPage({ onLaunchApp }) {
             }}>
             <Calendar size={15} color="#ea580c" />
             View Activity Calendar
+          </button>
+
+          <button
+            onClick={() => onLaunchApp('archive')}
+            style={{
+              backgroundColor: '#0d1527',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#f8fafc',
+              padding: '12px 22px',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+            <ArchiveIcon size={15} color="#ea580c" />
+            Data Archive & Export
           </button>
         </div>
 

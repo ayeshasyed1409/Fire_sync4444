@@ -16,13 +16,16 @@ import {
   Camera,
   Crosshair,
   Check,
-  Home
+  Home,
+  Archive as ArchiveIcon,
+  Download
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toPng } from 'html-to-image';
 import ActivityCalendar from './ActivityCalendar.jsx';
 import LandingPage from './LandingPage.jsx';
+import ArchivePage from './ArchivePage.jsx';
 
 // Fix default Leaflet icon assets
 delete L.Icon.Default.prototype._getIconUrl;
@@ -609,6 +612,27 @@ export default function App() {
             <CalendarIcon size={14} />
             Activity Calendar
           </button>
+
+          <button
+            onClick={() => setView('archive')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              backgroundColor: view === 'archive' ? '#ea580c' : 'transparent',
+              color: view === 'archive' ? '#ffffff' : '#94a3b8',
+              boxShadow: view === 'archive' ? '0 2px 8px rgba(234, 88, 12, 0.4)' : 'none',
+              transition: 'all 0.15s ease'
+            }}>
+            <ArchiveIcon size={14} />
+            Data Archive
+          </button>
         </nav>
 
         {/* Right: Contextual Telemetry & Map Controls */}
@@ -769,6 +793,28 @@ export default function App() {
             </button>
           )}
 
+          {view === 'archive' && (
+            <button
+              onClick={() => handleLaunchMap(date)}
+              style={{
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(234, 88, 12, 0.3)'
+              }}>
+              <Flame size={13} />
+              <span>Launch Live Map</span>
+            </button>
+          )}
+
           {view === 'landing' && (
             <button
               onClick={() => handleLaunchMap('2021-04-15')}
@@ -799,7 +845,7 @@ export default function App() {
           <LandingPage
             onLaunchApp={(targetView, targetDate) => {
               if (targetDate) setDate(targetDate);
-              setView(targetView === 'calendar' ? 'calendar' : 'map');
+              setView(targetView === 'calendar' ? 'calendar' : targetView === 'archive' ? 'archive' : 'map');
               if (targetView === 'map' && mapInstanceRef.current) {
                 setTimeout(() => mapInstanceRef.current.invalidateSize(), 50);
               }
@@ -821,6 +867,22 @@ export default function App() {
               }
             }}
             selectedDate={date}
+          />
+        </div>
+      )}
+
+      {/* VIEW 3: DATA ARCHIVE & CSV EXPORT */}
+      {view === 'archive' && (
+        <div style={{ flex: 1, overflowY: 'auto', height: 'calc(100vh - 52px)' }}>
+          <ArchivePage
+            onLaunchMap={(targetDate) => {
+              if (targetDate) setDate(targetDate);
+              setView('map');
+              if (mapInstanceRef.current) {
+                setTimeout(() => mapInstanceRef.current.invalidateSize(), 50);
+              }
+            }}
+            defaultDateRange={dateRange}
           />
         </div>
       )}
