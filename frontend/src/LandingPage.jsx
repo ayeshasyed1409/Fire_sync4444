@@ -101,39 +101,24 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
         justifyContent: 'space-between',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          title="FireSync Homepage"
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
           <div style={{
             backgroundColor: '#ea580c',
-            width: '32px',
-            height: '32px',
+            width: '30px',
+            height: '30px',
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <Flame size={18} color="#ffffff" />
+            <Flame size={17} color="#ffffff" />
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
-                FireSync
-              </span>
-              <span style={{
-                fontSize: '11px',
-                fontWeight: 600,
-                color: '#ea580c',
-                backgroundColor: '#fff7ed',
-                border: '1px solid #fed7aa',
-                padding: '1px 7px',
-                borderRadius: '4px'
-              }}>
-                NASA FIRMS
-              </span>
-            </div>
-            <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>
-              Active Fire Surveillance & Analytics Platform
-            </p>
-          </div>
+          <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', color: '#0f172a' }}>
+            FireSync
+          </span>
         </div>
 
         {/* Navigation Links */}

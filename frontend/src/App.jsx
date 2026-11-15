@@ -16,7 +16,6 @@ import {
   Camera,
   Crosshair,
   Check,
-  ArrowLeft,
   Home
 } from 'lucide-react';
 import L from 'leaflet';
@@ -414,77 +413,42 @@ export default function App() {
         <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
 
         {/* Top Navbar / Brand Badge */}
-        <div style={{
-          position: 'absolute',
-          top: '18px',
-          left: '18px',
-          zIndex: 1000,
-          background: 'rgba(12, 18, 29, 0.85)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '12px',
-          padding: '10px 16px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
+        <div
+          onClick={() => setView('landing')}
+          title="Go to Homepage"
+          style={{
+            position: 'absolute',
+            top: '18px',
+            left: '18px',
+            zIndex: 1000,
+            background: 'rgba(12, 18, 29, 0.88)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '10px',
+            padding: '8px 14px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            cursor: 'pointer',
+            userSelect: 'none',
+            transition: 'background 0.15s ease'
+          }}>
           <div style={{
             background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-            width: '34px',
-            height: '34px',
-            borderRadius: '9px',
+            width: '28px',
+            height: '28px',
+            borderRadius: '7px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 14px rgba(249, 115, 22, 0.45)'
+            boxShadow: '0 0 10px rgba(249, 115, 22, 0.4)'
           }}>
-            <Flame size={19} color="#ffffff" />
+            <Flame size={16} color="#ffffff" />
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', color: '#f8fafc' }}>
-                FireSync
-              </span>
-              <span style={{
-                fontSize: '9px',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                background: 'rgba(249, 115, 22, 0.15)',
-                color: '#fb923c',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                border: '1px solid rgba(249, 115, 22, 0.3)'
-              }}>
-                NASA FIRMS
-              </span>
-            </div>
-            <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0 }}>
-              Global Active Fire Surveillance & Harmonization
-            </p>
-          </div>
-
-          <button
-            onClick={() => setView('landing')}
-            title="Return to Landing Page Overview"
-            style={{
-              marginLeft: '8px',
-              padding: '6px 12px',
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '7px',
-              color: '#cbd5e1',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease'
-            }}>
-            <ArrowLeft size={13} color="#f97316" /> Landing Page
-          </button>
+          <span style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.02em', color: '#f8fafc' }}>
+            FireSync
+          </span>
         </div>
 
         {/* Top Center: Live Cursor Coordinates HUD */}
@@ -498,7 +462,7 @@ export default function App() {
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(249, 115, 22, 0.35)',
           borderRadius: '30px',
-          padding: '8px 20px',
+          padding: '8px 16px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 16px rgba(249, 115, 22, 0.15)',
           display: 'flex',
           alignItems: 'center',
@@ -506,14 +470,7 @@ export default function App() {
           userSelect: 'none',
           pointerEvents: 'auto'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Crosshair size={14} color="#f97316" />
-            <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em', color: '#fb923c', textTransform: 'uppercase' }}>
-              Coordinates
-            </span>
-          </div>
-
-          <div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.15)' }} />
+          <Crosshair size={14} color="#f97316" />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontFamily: 'monospace', fontSize: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
