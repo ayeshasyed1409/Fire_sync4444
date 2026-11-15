@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Flame, 
-  Sun, 
-  Moon, 
-  Calendar as CalendarIcon, 
-  Layers, 
-  Activity, 
+import {
+  Flame,
+  Sun,
+  Moon,
+  Calendar as CalendarIcon,
+  Layers,
+  Activity,
   RefreshCw,
   Maximize2,
   Sliders,
@@ -213,10 +213,10 @@ export default function App() {
 
     fires.forEach((fire) => {
       const relBrightness = Math.max(0, Math.min(1, (fire.brightness - minB) / bSpan));
-      
+
       // Determine authentic thermal color hierarchy & glowing bloom
       let coreColor, glowColor, strokeColor, coreRadius, glowRadius;
-      
+
       if (relBrightness > 0.7) {
         // Severe / Extreme Heatspot: White-hot gold core, incandescent red-orange bloom
         coreColor = '#fffbeb';
@@ -290,7 +290,7 @@ export default function App() {
 
       circle.bindPopup(popupHtml);
       circle.on('click', () => setSelectedFire(fire));
-      
+
       // Dynamic hover interaction
       circle.on('mouseover', function () {
         this.setRadius(coreRadius + 2.5);
@@ -489,7 +489,7 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', backgroundColor: '#06090e', overflow: 'hidden' }}>
-      
+
       {/* LEFT: MAP SURVEILLANCE VIEW */}
       <div style={{ flex: 1, position: 'relative', height: '100%' }}>
         <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
@@ -593,7 +593,7 @@ export default function App() {
             </div>
           </div>
 
-          <div 
+          <div
             style={{
               width: '7px',
               height: '7px',
@@ -601,8 +601,8 @@ export default function App() {
               background: cursorCoords?.active ? '#22c55e' : '#64748b',
               boxShadow: cursorCoords?.active ? '0 0 8px #22c55e' : 'none',
               transition: 'all 0.2s ease'
-            }} 
-            title={cursorCoords?.active ? 'Live cursor tracking active' : 'Map center position'} 
+            }}
+            title={cursorCoords?.active ? 'Live cursor tracking active' : 'Map center position'}
           />
         </div>
 
@@ -669,8 +669,8 @@ export default function App() {
               alignItems: 'center',
               gap: '8px',
               cursor: isCapturing ? 'wait' : 'pointer',
-              boxShadow: captureStatus === 'success' 
-                ? '0 0 16px rgba(34, 197, 94, 0.4)' 
+              boxShadow: captureStatus === 'success'
+                ? '0 0 16px rgba(34, 197, 94, 0.4)'
                 : '0 4px 18px rgba(249, 115, 22, 0.4)',
               transition: 'all 0.2s ease'
             }}>
@@ -707,7 +707,7 @@ export default function App() {
           display: 'flex',
           gap: '4px'
         }}>
-          <button 
+          <button
             onClick={() => setMapLayer('satellite')}
             style={{
               background: mapLayer === 'satellite' ? '#f97316' : 'transparent',
@@ -722,7 +722,7 @@ export default function App() {
             }}>
             Satellite
           </button>
-          <button 
+          <button
             onClick={() => setMapLayer('standard')}
             style={{
               background: mapLayer === 'standard' ? '#f97316' : 'transparent',
@@ -737,7 +737,7 @@ export default function App() {
             }}>
             Standard
           </button>
-          <button 
+          <button
             onClick={fitBounds}
             title="Focus Initial Area"
             style={{
@@ -752,7 +752,7 @@ export default function App() {
             }}>
             <Maximize2 size={14} />
           </button>
-          <button 
+          <button
             onClick={handleCaptureMap}
             title="Capture Screenshot of Map"
             style={{
@@ -792,7 +792,7 @@ export default function App() {
               borderRadius: '999px',
               background: 'linear-gradient(to right, #ef4444, #f97316, #fb923c, #fffbeb)'
             }} />
-            <span style={{ fontSize: '10px', color: '#fef08a', fontWeight: 700 }}>Severe (>375K)</span>
+            <span style={{ fontSize: '10px', color: '#fef08a', fontWeight: 700 }}>Severe (&gt;375K)</span>
           </div>
         </div>
       </div>
@@ -836,7 +836,7 @@ export default function App() {
             <Sliders size={16} color={activeTab === 'surveillance' ? '#f97316' : '#64748b'} />
             Surveillance & Map
           </button>
-          
+
           <button
             onClick={() => setActiveTab('calendar')}
             style={{
@@ -861,14 +861,14 @@ export default function App() {
         {/* TAB 1: SURVEILLANCE & CONTROLS */}
         {activeTab === 'surveillance' && (
           <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
+
             {/* Observation Date */}
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
                 Observation Date
               </label>
               <div style={{ position: 'relative' }}>
-                <input 
+                <input
                   type="date"
                   value={date}
                   min={dateRange.min_date}
@@ -1052,7 +1052,7 @@ export default function App() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>Inspected Spot</span>
-                  <button 
+                  <button
                     onClick={() => setSelectedFire(null)}
                     style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px' }}>
                     ✕
@@ -1074,9 +1074,9 @@ export default function App() {
         {/* TAB 2: BURNING ACTIVITY CALENDAR HEATMAP */}
         {activeTab === 'calendar' && (
           <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-            <ActivityCalendar 
-              onSelectDate={handleSelectDateFromCalendar} 
-              selectedDate={date} 
+            <ActivityCalendar
+              onSelectDate={handleSelectDateFromCalendar}
+              selectedDate={date}
             />
           </div>
         )}
