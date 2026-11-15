@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { toPng } from 'html-to-image';
 import ActivityCalendar from './ActivityCalendar.jsx';
 
 // Fix default Leaflet icon assets
@@ -322,131 +323,26 @@ export default function App() {
 
     try {
       const container = mapContainerRef.current;
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-
-      // Create high-resolution export canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = width * pixelRatio;
-      canvas.height = height * pixelRatio;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(pixelRatio, pixelRatio);
-
-      // Fill dark base background
-      ctx.fillStyle = '#06090e';
-      ctx.fillRect(0, 0, width, height);
-
-      // 1. Draw Map Tiles
-      const tileImages = container.querySelectorAll('.leaflet-tile-pane img');
-      const containerRect = container.getBoundingClientRect();
-
-      for (const img of tileImages) {
-        if (!img.complete || img.naturalWidth === 0) continue;
-        const rect = img.getBoundingClientRect();
-        const x = rect.left - containerRect.left;
-        const y = rect.top - containerRect.top;
-        const w = rect.width;
-        const h = rect.height;
-
-        try {
-          ctx.drawImage(img, x, y, w, h);
-        } catch (err) {
-          console.warn('Tile render fallback:', err);
+      const dataUrl = await toPng(container, {
+        cacheBust: true,
+        pixelRatio: window.devicePixelRatio || 1,
+        filter: (node) => {
+          // Exclude leaflet controls like zoom buttons from the screenshot
+          if (node.classList && node.classList.contains('leaflet-control-zoom')) return false;
+          return true;
         }
-      }
+      });
 
-      // 2. Draw Vector Overlays (Markers)
-      const overlaySvg = container.querySelector('.leaflet-overlay-pane svg');
-      const overlayCanvas = container.querySelector('.leaflet-overlay-pane canvas');
-
-      if (overlayCanvas) {
-        const rect = overlayCanvas.getBoundingClientRect();
-        const x = rect.left - containerRect.left;
-        const y = rect.top - containerRect.top;
-        ctx.drawImage(overlayCanvas, x, y, rect.width, rect.height);
-      } else if (overlaySvg) {
-        let svgString = new XMLSerializer().serializeToString(overlaySvg);
-        if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
-          svgString = svgString.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-        }
-        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-        const blobUrl = URL.createObjectURL(svgBlob);
-        const svgImg = new Image();
-
-        await new Promise((resolve) => {
-          svgImg.onload = () => {
-            const rect = overlaySvg.getBoundingClientRect();
-            const x = rect.left - containerRect.left;
-            const y = rect.top - containerRect.top;
-            ctx.drawImage(svgImg, x, y, rect.width, rect.height);
-            URL.revokeObjectURL(blobUrl);
-            resolve();
-          };
-          svgImg.onerror = () => {
-            URL.revokeObjectURL(blobUrl);
-            resolve();
-          };
-          svgImg.src = blobUrl;
-        });
-      }
-
-      // 3. Telemetry Header Banner
-      const headerH = 44;
-      ctx.fillStyle = 'rgba(12, 18, 29, 0.92)';
-      ctx.fillRect(0, 0, width, headerH);
-      ctx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, headerH);
-      ctx.lineTo(width, headerH);
-      ctx.stroke();
-
-      ctx.fillStyle = '#f97316';
-      ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('🔥 FireSync', 16, 27);
-
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(`NASA FIRMS Satellite Fire Intelligence | Observation Date: ${date} | Active Hotspots: ${stats.count} | Peak: ${stats.maxBrightness} K`, 110, 27);
-
-      // 4. Coordinates & Timestamp Footer Banner
-      const footerH = 28;
-      ctx.fillStyle = 'rgba(12, 18, 29, 0.88)';
-      ctx.fillRect(0, height - footerH, width, footerH);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.beginPath();
-      ctx.moveTo(0, height - footerH);
-      ctx.lineTo(width, height - footerH);
-      ctx.stroke();
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      const mapCenter = mapInstanceRef.current ? mapInstanceRef.current.getCenter() : { lat: 0, lng: 0 };
-      ctx.fillText(`Center: ${mapCenter.lat.toFixed(4)}° N, ${mapCenter.lng.toFixed(4)}° E | Layer: ${mapLayer.toUpperCase()} | Captured: ${new Date().toLocaleString()}`, 16, height - 9);
-
-      // Export PNG file
       const fileName = `FireSync-Map-${date}-${Date.now()}.png`;
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          const dataUrl = canvas.toDataURL('image/png');
-          const a = document.createElement('a');
-          a.download = fileName;
-          a.href = dataUrl;
-          a.click();
-        } else {
-          const downloadUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.download = fileName;
-          a.href = downloadUrl;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(downloadUrl), 2000);
-        }
-        setCaptureStatus('success');
-        setTimeout(() => setCaptureStatus(null), 3500);
-      }, 'image/png');
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setCaptureStatus('success');
+      setTimeout(() => setCaptureStatus(null), 3500);
     } catch (err) {
       console.error('Failed to capture map screenshot:', err);
       setCaptureStatus('error');
