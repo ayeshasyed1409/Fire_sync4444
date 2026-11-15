@@ -45,8 +45,6 @@ pnpm-debug.log*
 
 # Datasets & Processed databases (large files > 100MB)
 data/raw/*.csv
-data/processed/*.csv
-data/processed/*.db
 *.zip
 data.zip
 
