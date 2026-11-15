@@ -7,10 +7,11 @@ import {
   Calendar,
   Sun,
   Camera,
-  Crosshair
+  Crosshair,
+  Satellite
 } from 'lucide-react';
 
-export default function LandingPage({ onLaunchApp, dateRange }) {
+export default function LandingPage({ onLaunchApp }) {
   const features = [
     {
       icon: <Globe size={20} color="#ea580c" />,
@@ -35,7 +36,7 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
     {
       icon: <Calendar size={20} color="#ea580c" />,
       title: 'Burning Activity Calendar',
-      desc: 'Multi-year matrix heatmap grouped by year and month (2020–2026), paired with a daily calendar view for identifying seasonal fire patterns.'
+      desc: 'Dedicated full-page matrix heatmap grouped by year and month (2020–2026), paired with a daily calendar view for identifying seasonal fire patterns.'
     },
     {
       icon: <Camera size={20} color="#ea580c" />,
@@ -79,102 +80,12 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
 
   return (
     <div style={{
-      width: '100vw',
-      height: '100vh',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      backgroundColor: '#f8fafc',
-      color: '#0f172a',
+      width: '100%',
+      minHeight: '100%',
+      backgroundColor: '#080d1a',
+      color: '#f8fafc',
       fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     }}>
-
-      {/* TOP HEADER NAVIGATION */}
-      <header style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
-        padding: '14px 32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)'
-      }}>
-        <div
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          title="FireSync Homepage"
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
-          <div style={{
-            backgroundColor: '#ea580c',
-            width: '30px',
-            height: '30px',
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Flame size={17} color="#ffffff" />
-          </div>
-          <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', color: '#0f172a' }}>
-            FireSync
-          </span>
-        </div>
-
-        {/* Navigation Links */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <a href="#stats" style={{ color: '#475569', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-            Dataset Overview
-          </a>
-          <a href="#features" style={{ color: '#475569', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-            Features
-          </a>
-          <a href="#pipeline" style={{ color: '#475569', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-            Processing Pipeline
-          </a>
-        </nav>
-
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={() => onLaunchApp('calendar')}
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
-              padding: '8px 14px',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-            <Calendar size={14} color="#ea580c" />
-            Activity Calendar
-          </button>
-          <button
-            onClick={() => onLaunchApp('surveillance')}
-            style={{
-              backgroundColor: '#ea580c',
-              border: '1px solid #ea580c',
-              color: '#ffffff',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '7px',
-              boxShadow: '0 1px 2px rgba(234, 88, 12, 0.2)'
-            }}>
-            <Flame size={15} />
-            Open Interactive Map
-          </button>
-        </div>
-      </header>
 
       {/* HERO SECTION */}
       <section style={{
@@ -187,15 +98,15 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '6px',
-          backgroundColor: '#f1f5f9',
-          border: '1px solid #e2e8f0',
-          borderRadius: '4px',
-          padding: '4px 10px',
-          marginBottom: '20px',
+          gap: '8px',
+          backgroundColor: '#0d1527',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '6px',
+          padding: '5px 12px',
+          marginBottom: '22px',
           fontSize: '12px',
           fontWeight: 600,
-          color: '#475569'
+          color: '#cbd5e1'
         }}>
           <Database size={13} color="#ea580c" />
           <span>NASA FIRMS Active Fire Hotspots &bull; India Region (2020&ndash;2026)</span>
@@ -206,7 +117,7 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
           fontWeight: 800,
           lineHeight: 1.2,
           letterSpacing: '-0.025em',
-          color: '#0f172a',
+          color: '#f8fafc',
           maxWidth: '860px',
           margin: '0 auto 16px'
         }}>
@@ -214,8 +125,8 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
         </h1>
 
         <p style={{
-          fontSize: '17px',
-          color: '#475569',
+          fontSize: '16px',
+          color: '#94a3b8',
           lineHeight: 1.6,
           maxWidth: '780px',
           margin: '0 auto 32px'
@@ -224,120 +135,120 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
         </p>
 
         {/* Hero Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '40px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '44px' }}>
           <button
-            onClick={() => onLaunchApp('surveillance')}
+            onClick={() => onLaunchApp('map')}
             style={{
               backgroundColor: '#ea580c',
               border: 'none',
               color: '#ffffff',
               padding: '12px 24px',
               borderRadius: '6px',
-              fontSize: '15px',
-              fontWeight: 600,
+              fontSize: '14px',
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              boxShadow: '0 2px 4px rgba(234, 88, 12, 0.25)'
+              boxShadow: '0 2px 6px rgba(234, 88, 12, 0.35)'
             }}>
-            <Flame size={17} />
-            Launch Map Surveillance
-            <ArrowRight size={15} />
+            <Flame size={16} />
+            Launch Live Map
+            <ArrowRight size={14} />
           </button>
 
           <button
             onClick={() => onLaunchApp('calendar')}
             style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#0f172a',
+              backgroundColor: '#0d1527',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#f8fafc',
               padding: '12px 22px',
               borderRadius: '6px',
-              fontSize: '15px',
+              fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
             }}>
-            <Calendar size={16} color="#ea580c" />
+            <Calendar size={15} color="#ea580c" />
             View Activity Calendar
           </button>
         </div>
 
-        {/* APPLICATION WORKSPACE PREVIEW CARD (Clean Light Card) */}
+        {/* APPLICATION WORKSPACE OVERVIEW CARD */}
         <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '10px',
-          border: '1px solid #e2e8f0',
-          padding: '20px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+          backgroundColor: '#0d1527',
+          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '24px',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
           textAlign: 'left'
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid #f1f5f9',
-            paddingBottom: '12px',
-            marginBottom: '16px'
+            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            paddingBottom: '14px',
+            marginBottom: '18px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
               <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
               <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155', marginLeft: '6px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', marginLeft: '6px' }}>
                 Application Workspace Overview
               </span>
             </div>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>
-              SQLite Database: <code style={{ backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#0f172a' }}>fires.db</code> (3.28M rows)
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+              SQLite Database: <code style={{ backgroundColor: 'rgba(255, 255, 255, 0.06)', padding: '2px 6px', borderRadius: '4px', color: '#ea580c' }}>fires.db</code> (3.28M rows)
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
-            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+            <div style={{ backgroundColor: '#131f38', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px', padding: '16px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Bounding Box</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginTop: '4px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginTop: '4px' }}>
                 6.5° N &ndash; 37.5° N, 68.0° E &ndash; 97.5° E
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>India Geographic Bounds</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>India Geographic Bounds</div>
             </div>
 
-            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+            <div style={{ backgroundColor: '#131f38', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px', padding: '16px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Satellite Constellations</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginTop: '4px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginTop: '4px' }}>
                 MODIS (Terra/Aqua) + VIIRS (SNPP)
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>NASA FIRMS Ingested Feeds</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>NASA FIRMS Ingested Feeds</div>
             </div>
 
-            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+            <div style={{ backgroundColor: '#131f38', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px', padding: '16px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Database Query Speed</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#16a34a', marginTop: '4px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#22c55e', marginTop: '4px' }}>
                 Sub-15ms Response Time
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>B-Tree Index on (acq_date, daynight)</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>B-Tree Index on (acq_date, daynight)</div>
             </div>
 
-            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '14px' }}>
+            <div style={{ backgroundColor: '#131f38', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px', padding: '16px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Default Inspection Date</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#ea580c', marginTop: '4px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#ea580c', marginTop: '4px' }}>
                 2021-04-15 (2,286 Spots)
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Date range: 2020-11-01 to 2026-11-02</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Date range: 2020-11-01 to 2026-11-02</div>
             </div>
           </div>
         </div>
 
       </section>
 
-      {/* STATS STRIP (Real counts from fires.db) */}
-      <section id="stats" style={{
-        backgroundColor: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
-        borderBottom: '1px solid #e2e8f0',
+      {/* STATS STRIP */}
+      <section style={{
+        backgroundColor: '#0b1122',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         padding: '36px 24px'
       }}>
         <div style={{
@@ -349,13 +260,13 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
           textAlign: 'center'
         }}>
           <div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: '32px', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em' }}>
               3,285,447
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginTop: '2px' }}>
               Harmonized Fire Records
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
               Ingested & Deduplicated
             </div>
           </div>
@@ -364,34 +275,34 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
             <div style={{ fontSize: '32px', fontWeight: 800, color: '#ea580c', letterSpacing: '-0.02em' }}>
               2,782,569
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginTop: '2px' }}>
               VIIRS Detections
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
               Suomi-NPP Platform
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#2563eb', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: '32px', fontWeight: 800, color: '#3b82f6', letterSpacing: '-0.02em' }}>
               502,878
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginTop: '2px' }}>
               MODIS Detections
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
               Aqua (340k) & Terra (162k)
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: '32px', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em' }}>
               2,191
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginTop: '2px' }}>
               Observation Days
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
               Nov 1, 2020 &ndash; Nov 2, 2026
             </div>
           </div>
@@ -400,10 +311,10 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
             <div style={{ fontSize: '32px', fontWeight: 800, color: '#16a34a', letterSpacing: '-0.02em' }}>
               ~1.1 km²
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginTop: '2px' }}>
               Grid Cell Resolution
             </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
               Spatial Deduplication Binning
             </div>
           </div>
@@ -411,7 +322,7 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
       </section>
 
       {/* CORE FEATURES SECTION */}
-      <section id="features" style={{
+      <section style={{
         maxWidth: '1160px',
         margin: '0 auto',
         padding: '64px 24px'
@@ -426,10 +337,10 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
           }}>
             Capabilities
           </span>
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '8px' }}>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#f8fafc', marginTop: '6px', marginBottom: '8px' }}>
             Built-in Web Application Features
           </h2>
-          <p style={{ fontSize: '15px', color: '#64748b', margin: 0, maxWidth: '680px' }}>
+          <p style={{ fontSize: '15px', color: '#94a3b8', margin: 0, maxWidth: '680px' }}>
             The frontend connects to the local SQLite backend to provide high-framerate map rendering and analytical filters.
           </p>
         </div>
@@ -443,20 +354,19 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
             <div
               key={idx}
               style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
+                backgroundColor: '#0d1527',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '10px',
                 padding: '22px',
                 display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)'
+                flexDirection: 'column'
               }}>
               <div style={{
-                backgroundColor: '#fff7ed',
-                border: '1px solid #fed7aa',
+                backgroundColor: 'rgba(234, 88, 12, 0.12)',
+                border: '1px solid rgba(234, 88, 12, 0.25)',
                 width: '38px',
                 height: '38px',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -464,10 +374,10 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
               }}>
                 {feat.icon}
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '6px' }}>
                 {feat.title}
               </h3>
-              <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5, margin: 0 }}>
+              <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
                 {feat.desc}
               </p>
             </div>
@@ -475,11 +385,11 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
         </div>
       </section>
 
-      {/* DATA PIPELINE ARCHITECTURE (Directly matching repository scripts) */}
-      <section id="pipeline" style={{
-        backgroundColor: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
-        borderBottom: '1px solid #e2e8f0',
+      {/* DATA PIPELINE ARCHITECTURE */}
+      <section style={{
+        backgroundColor: '#0b1122',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         padding: '64px 24px'
       }}>
         <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
@@ -493,10 +403,10 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
             }}>
               Data Engineering
             </span>
-            <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '8px' }}>
+            <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#f8fafc', marginTop: '6px', marginBottom: '8px' }}>
               Pipeline & Processing Flow
             </h2>
-            <p style={{ fontSize: '15px', color: '#64748b', margin: 0, maxWidth: '680px' }}>
+            <p style={{ fontSize: '15px', color: '#94a3b8', margin: 0, maxWidth: '680px' }}>
               The data pipeline transforms raw NASA FIRMS CSV archive and near-real-time files into an indexed SQLite database.
             </p>
           </div>
@@ -506,9 +416,9 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
               <div
                 key={idx}
                 style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
+                  backgroundColor: '#0d1527',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '10px',
                   padding: '18px 20px',
                   display: 'grid',
                   gridTemplateColumns: '40px 220px 1fr',
@@ -519,9 +429,9 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#334155',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#cbd5e1',
                   fontSize: '14px',
                   fontWeight: 700,
                   display: 'flex',
@@ -532,7 +442,7 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>
                     {step.title}
                   </div>
                   <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#ea580c', marginTop: '2px' }}>
@@ -540,7 +450,7 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
                   </div>
                 </div>
 
-                <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+                <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5 }}>
                   {step.desc}
                 </div>
               </div>
@@ -551,8 +461,8 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
 
       {/* FOOTER */}
       <footer style={{
-        backgroundColor: '#ffffff',
-        padding: '24px 32px',
+        backgroundColor: '#080d1a',
+        padding: '28px 32px',
         fontSize: '12px',
         color: '#64748b'
       }}>
@@ -567,7 +477,7 @@ export default function LandingPage({ onLaunchApp, dateRange }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Flame size={15} color="#ea580c" />
-            <strong style={{ color: '#0f172a' }}>FireSync</strong>
+            <strong style={{ color: '#f8fafc' }}>FireSync</strong>
             <span>&bull; NASA FIRMS Active Fire Surveillance & Analytics Platform</span>
           </div>
           <div>

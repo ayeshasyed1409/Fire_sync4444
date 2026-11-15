@@ -39,8 +39,7 @@ const INITIAL_BOUNDS = [
 ];
 
 export default function App() {
-  const [view, setView] = useState('landing'); // 'landing' | 'app'
-  const [activeTab, setActiveTab] = useState('surveillance'); // 'surveillance' | 'calendar'
+  const [view, setView] = useState('landing'); // 'landing' | 'map' | 'calendar'
   const [date, setDate] = useState('2021-04-15');
   const [daynight, setDaynight] = useState('ALL');
   const [fires, setFires] = useState([]);
@@ -61,23 +60,15 @@ export default function App() {
   const selectionLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
 
-  const handleLaunchApp = (tab = 'surveillance', targetDate = null) => {
+  const handleLaunchMap = (targetDate = null) => {
     if (targetDate) {
       setDate(targetDate);
     }
-    if (tab) {
-      setActiveTab(tab);
-    }
-    setView('app');
-    if (mapInstanceRef.current) {
-      setTimeout(() => {
-        mapInstanceRef.current.invalidateSize();
-      }, 50);
-    }
+    setView('map');
   };
 
   useEffect(() => {
-    if (view === 'app' && mapInstanceRef.current) {
+    if (view === 'map' && mapInstanceRef.current) {
       setTimeout(() => {
         mapInstanceRef.current.invalidateSize();
       }, 50);
@@ -384,366 +375,440 @@ export default function App() {
     }
   };
 
-  const handleSelectDateFromCalendar = (newDate) => {
-    setDate(newDate);
-    setActiveTab('surveillance');
-  };
-
   return (
-    <>
-      {view === 'landing' && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-          <LandingPage 
-            onLaunchApp={handleLaunchApp} 
-            dateRange={dateRange} 
-          />
-        </div>
-      )}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      width: '100vw',
+      backgroundColor: '#070b14',
+      overflow: 'hidden',
+      fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    }}>
 
-      <div style={{
+      {/* TOP PERSISTENT NAVBAR */}
+      <header style={{
+        height: '52px',
+        backgroundColor: '#0c121d',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         display: 'flex',
-        height: '100vh',
-        width: '100vw',
-        backgroundColor: '#06090e',
-        overflow: 'hidden',
-        visibility: view === 'landing' ? 'hidden' : 'visible'
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 18px',
+        zIndex: 2000,
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
       }}>
-      {/* LEFT: MAP SURVEILLANCE VIEW */}
-      <div style={{ flex: 1, position: 'relative', height: '100%' }}>
-        <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-
-        {/* Top Navbar / Brand Badge */}
+        {/* Left: FireSync Logo & Brand */}
         <div
           onClick={() => setView('landing')}
-          title="Go to Homepage"
+          title="Return to FireSync Overview"
           style={{
-            position: 'absolute',
-            top: '18px',
-            left: '18px',
-            zIndex: 1000,
-            background: 'rgba(12, 18, 29, 0.88)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '10px',
-            padding: '8px 14px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
             cursor: 'pointer',
-            userSelect: 'none',
-            transition: 'background 0.15s ease'
+            userSelect: 'none'
           }}>
           <div style={{
             background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-            width: '28px',
-            height: '28px',
-            borderRadius: '7px',
+            width: '30px',
+            height: '30px',
+            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 10px rgba(249, 115, 22, 0.4)'
+            boxShadow: '0 0 12px rgba(249, 115, 22, 0.4)'
           }}>
-            <Flame size={16} color="#ffffff" />
+            <Flame size={18} color="#ffffff" />
           </div>
-          <span style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.02em', color: '#f8fafc' }}>
-            FireSync
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.02em', color: '#f8fafc', lineHeight: 1.2 }}>
+              FireSync
+            </span>
+            <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', color: '#ea580c', textTransform: 'uppercase' }}>
+              NASA FIRMS Engine
+            </span>
+          </div>
         </div>
 
-        {/* Top Center: Live Cursor Coordinates HUD */}
-        <div style={{
-          position: 'absolute',
-          top: '18px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 1000,
-          background: 'rgba(12, 18, 29, 0.92)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(249, 115, 22, 0.35)',
-          borderRadius: '30px',
-          padding: '8px 16px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 16px rgba(249, 115, 22, 0.15)',
+        {/* Center: Main Navigation Pills */}
+        <nav style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          userSelect: 'none',
-          pointerEvents: 'auto'
-        }}>
-          <Crosshair size={14} color="#f97316" />
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontFamily: 'monospace', fontSize: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>LAT</span>
-              <span style={{ color: '#f8fafc', fontWeight: 700 }}>
-                {cursorCoords ? `${Math.abs(cursorCoords.lat).toFixed(4)}° ${cursorCoords.lat >= 0 ? 'N' : 'S'}` : '--'}
-              </span>
-            </div>
-
-            <div style={{ width: '1px', height: '10px', background: 'rgba(255, 255, 255, 0.08)' }} />
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>LON</span>
-              <span style={{ color: '#f8fafc', fontWeight: 700 }}>
-                {cursorCoords ? `${Math.abs(cursorCoords.lng).toFixed(4)}° ${cursorCoords.lng >= 0 ? 'E' : 'W'}` : '--'}
-              </span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: cursorCoords?.active ? '#22c55e' : '#64748b',
-              boxShadow: cursorCoords?.active ? '0 0 8px #22c55e' : 'none',
-              transition: 'all 0.2s ease'
-            }}
-            title={cursorCoords?.active ? 'Live cursor tracking active' : 'Map center position'}
-          />
-        </div>
-
-        {/* Top Right: Screenshot Capture Button */}
-        <div style={{
-          position: 'absolute',
-          top: '18px',
-          right: '18px',
-          zIndex: 1000
-        }}>
-          <button
-            onClick={handleCaptureMap}
-            disabled={isCapturing}
-            title="Capture and download high-resolution screenshot of the map"
-            style={{
-              background: captureStatus === 'success' ? '#15803d' : 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '8px 14px',
-              fontSize: '12px',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: isCapturing ? 'wait' : 'pointer',
-              boxShadow: captureStatus === 'success'
-                ? '0 0 16px rgba(34, 197, 94, 0.4)'
-                : '0 4px 18px rgba(249, 115, 22, 0.4)',
-              transition: 'all 0.2s ease'
-            }}>
-            {isCapturing ? (
-              <>
-                <RefreshCw size={14} className="animate-spin" />
-                <span>Capturing...</span>
-              </>
-            ) : captureStatus === 'success' ? (
-              <>
-                <Check size={14} />
-                <span>Saved!</span>
-              </>
-            ) : (
-              <>
-                <Camera size={15} />
-                <span>Capture Map</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Map View Mode Controls */}
-        <div style={{
-          position: 'absolute',
-          bottom: '22px',
-          left: '70px',
-          zIndex: 1000,
-          background: 'rgba(12, 18, 29, 0.85)',
-          backdropFilter: 'blur(16px)',
+          backgroundColor: '#070b14',
           border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '10px',
-          padding: '4px',
-          display: 'flex',
-          gap: '4px'
+          borderRadius: '8px',
+          padding: '3px'
         }}>
-          <button
-            onClick={() => setMapLayer('satellite')}
-            style={{
-              background: mapLayer === 'satellite' ? '#f97316' : 'transparent',
-              color: mapLayer === 'satellite' ? '#ffffff' : '#94a3b8',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '7px',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}>
-            Satellite
-          </button>
-          <button
-            onClick={() => setMapLayer('standard')}
-            style={{
-              background: mapLayer === 'standard' ? '#f97316' : 'transparent',
-              color: mapLayer === 'standard' ? '#ffffff' : '#94a3b8',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '7px',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}>
-            Standard
-          </button>
-          <button
-            onClick={fitBounds}
-            title="Focus Initial Area"
-            style={{
-              background: 'transparent',
-              color: '#94a3b8',
-              border: 'none',
-              padding: '6px 10px',
-              borderRadius: '7px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-            <Maximize2 size={14} />
-          </button>
-          <button
-            onClick={handleCaptureMap}
-            title="Capture Screenshot of Map"
-            style={{
-              background: 'transparent',
-              color: '#94a3b8',
-              border: 'none',
-              padding: '6px 10px',
-              borderRadius: '7px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-            <Camera size={14} />
-          </button>
-        </div>
-
-        {/* Floating Brightness Legend on Map */}
-        <div style={{
-          position: 'absolute',
-          bottom: '22px',
-          right: '18px',
-          zIndex: 1000,
-          background: 'rgba(12, 18, 29, 0.88)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '10px',
-          padding: '8px 14px',
-          fontSize: '11px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
-        }}>
-          <div style={{ color: '#94a3b8', fontWeight: 600, marginBottom: '5px' }}>Thermal Brightness Intensity</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '10px', color: '#facc15', fontWeight: 700 }}>Moderate</span>
-            <div style={{
-              width: '110px',
-              height: '6px',
-              borderRadius: '999px',
-              background: 'linear-gradient(to right, #facc15, #f97316, #ef4444)'
-            }} />
-            <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700 }}>Severe (&gt;375K)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* RIGHT SIDE PANEL: DUAL TAB INTERFACE */}
-      <div style={{
-        width: '460px',
-        height: '100%',
-        backgroundColor: '#0c121d',
-        borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 1000,
-        boxShadow: '-10px 0 35px rgba(0, 0, 0, 0.6)'
-      }}>
-
-        {/* TAB NAVIGATION HEADER */}
-        <div style={{
-          display: 'flex',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          padding: '12px 16px 0',
-          gap: '8px',
-          background: '#090e17'
-        }}>
-          <button
-            onClick={() => setActiveTab('surveillance')}
-            style={{
-              padding: '10px 16px',
-              background: 'none',
-              border: 'none',
-              borderBottom: `2px solid ${activeTab === 'surveillance' ? '#f97316' : 'transparent'}`,
-              color: activeTab === 'surveillance' ? '#f8fafc' : '#64748b',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.15s ease'
-            }}>
-            <Sliders size={16} color={activeTab === 'surveillance' ? '#f97316' : '#64748b'} />
-            Surveillance & Map
-          </button>
-
-          <button
-            onClick={() => setActiveTab('calendar')}
-            style={{
-              padding: '10px 16px',
-              background: 'none',
-              border: 'none',
-              borderBottom: `2px solid ${activeTab === 'calendar' ? '#f97316' : 'transparent'}`,
-              color: activeTab === 'calendar' ? '#f8fafc' : '#64748b',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.15s ease'
-            }}>
-            <CalendarIcon size={16} color={activeTab === 'calendar' ? '#f97316' : '#64748b'} />
-            Burning Activity Calendar
-          </button>
-
           <button
             onClick={() => setView('landing')}
-            title="Return to Landing Page"
             style={{
-              marginLeft: 'auto',
-              marginBottom: '8px',
-              padding: '6px 12px',
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '6px',
-              color: '#94a3b8',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              transition: 'all 0.15s'
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              backgroundColor: view === 'landing' ? '#ea580c' : 'transparent',
+              color: view === 'landing' ? '#ffffff' : '#94a3b8',
+              boxShadow: view === 'landing' ? '0 2px 8px rgba(234, 88, 12, 0.4)' : 'none',
+              transition: 'all 0.15s ease'
             }}>
-            <Home size={12} color="#f97316" /> Overview
+            <Globe size={14} />
+            Overview
           </button>
+
+          <button
+            onClick={() => {
+              setView('map');
+              if (mapInstanceRef.current) {
+                setTimeout(() => mapInstanceRef.current.invalidateSize(), 50);
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              backgroundColor: view === 'map' ? '#ea580c' : 'transparent',
+              color: view === 'map' ? '#ffffff' : '#94a3b8',
+              boxShadow: view === 'map' ? '0 2px 8px rgba(234, 88, 12, 0.4)' : 'none',
+              transition: 'all 0.15s ease'
+            }}>
+            <Crosshair size={14} />
+            Live Map
+          </button>
+
+          <button
+            onClick={() => setView('calendar')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              backgroundColor: view === 'calendar' ? '#ea580c' : 'transparent',
+              color: view === 'calendar' ? '#ffffff' : '#94a3b8',
+              boxShadow: view === 'calendar' ? '0 2px 8px rgba(234, 88, 12, 0.4)' : 'none',
+              transition: 'all 0.15s ease'
+            }}>
+            <CalendarIcon size={14} />
+            Activity Calendar
+          </button>
+        </nav>
+
+        {/* Right: Contextual Telemetry & Map Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {view === 'map' && (
+            <>
+              {/* Coordinates HUD */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                backgroundColor: '#070b14',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '6px',
+                padding: '5px 10px',
+                fontFamily: 'monospace',
+                fontSize: '11px'
+              }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>LAT</span>
+                <span style={{ color: '#f8fafc', fontWeight: 700 }}>
+                  {cursorCoords ? `${Math.abs(cursorCoords.lat).toFixed(4)}° ${cursorCoords.lat >= 0 ? 'N' : 'S'}` : '--'}
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>LON</span>
+                <span style={{ color: '#f8fafc', fontWeight: 700 }}>
+                  {cursorCoords ? `${Math.abs(cursorCoords.lng).toFixed(4)}° ${cursorCoords.lng >= 0 ? 'E' : 'W'}` : '--'}
+                </span>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: cursorCoords?.active ? '#22c55e' : '#64748b',
+                    boxShadow: cursorCoords?.active ? '0 0 6px #22c55e' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title={cursorCoords?.active ? 'Live cursor tracking active' : 'Map center position'}
+                />
+              </div>
+
+              {/* Basemap Switcher */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: '#070b14',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '6px',
+                padding: '2px'
+              }}>
+                <button
+                  onClick={() => setMapLayer('satellite')}
+                  style={{
+                    background: mapLayer === 'satellite' ? '#ea580c' : 'transparent',
+                    color: mapLayer === 'satellite' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}>
+                  Satellite
+                </button>
+                <button
+                  onClick={() => setMapLayer('standard')}
+                  style={{
+                    background: mapLayer === 'standard' ? '#ea580c' : 'transparent',
+                    color: mapLayer === 'standard' ? '#ffffff' : '#94a3b8',
+                    border: 'none',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}>
+                  Standard
+                </button>
+              </div>
+
+              {/* Recenter Bounds */}
+              <button
+                onClick={fitBounds}
+                title="Fit India View"
+                style={{
+                  background: '#070b14',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  color: '#94a3b8',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                <Maximize2 size={13} />
+              </button>
+
+              {/* Screenshot Capture Button */}
+              <button
+                onClick={handleCaptureMap}
+                disabled={isCapturing}
+                title="Capture and download high-resolution map image"
+                style={{
+                  background: captureStatus === 'success' ? '#15803d' : 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '5px 10px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: isCapturing ? 'wait' : 'pointer',
+                  boxShadow: '0 2px 8px rgba(234, 88, 12, 0.3)',
+                  transition: 'all 0.2s ease'
+                }}>
+                {isCapturing ? (
+                  <>
+                    <RefreshCw size={12} className="animate-spin" />
+                    <span>Capturing...</span>
+                  </>
+                ) : captureStatus === 'success' ? (
+                  <>
+                    <Check size={12} />
+                    <span>Saved!</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera size={13} />
+                    <span>Capture</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
+
+          {view === 'calendar' && (
+            <button
+              onClick={() => handleLaunchMap(date)}
+              style={{
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(234, 88, 12, 0.3)'
+              }}>
+              <Flame size={13} />
+              <span>Open in Live Map ({date})</span>
+            </button>
+          )}
+
+          {view === 'landing' && (
+            <button
+              onClick={() => handleLaunchMap('2021-04-15')}
+              style={{
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 14px',
+                fontSize: '12px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(234, 88, 12, 0.3)'
+              }}>
+              <Flame size={13} />
+              <span>Launch Live Map</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* VIEW 1: LANDING OVERVIEW */}
+      {view === 'landing' && (
+        <div style={{ flex: 1, overflowY: 'auto', height: 'calc(100vh - 52px)' }}>
+          <LandingPage
+            onLaunchApp={(targetView, targetDate) => {
+              if (targetDate) setDate(targetDate);
+              setView(targetView === 'calendar' ? 'calendar' : 'map');
+              if (targetView === 'map' && mapInstanceRef.current) {
+                setTimeout(() => mapInstanceRef.current.invalidateSize(), 50);
+              }
+            }}
+            dateRange={dateRange}
+          />
+        </div>
+      )}
+
+      {/* VIEW 2: DEDICATED ACTIVITY CALENDAR */}
+      {view === 'calendar' && (
+        <div style={{ flex: 1, overflowY: 'auto', height: 'calc(100vh - 52px)' }}>
+          <ActivityCalendar
+            onSelectDate={(targetDate) => {
+              setDate(targetDate);
+              setView('map');
+              if (mapInstanceRef.current) {
+                setTimeout(() => mapInstanceRef.current.invalidateSize(), 50);
+              }
+            }}
+            selectedDate={date}
+          />
+        </div>
+      )}
+
+      {/* VIEW 3: LIVE SURVEILLANCE MAP */}
+      <div style={{
+        display: view === 'map' ? 'flex' : 'none',
+        flex: 1,
+        height: 'calc(100vh - 52px)',
+        width: '100vw',
+        overflow: 'hidden'
+      }}>
+        {/* Map Container */}
+        <div style={{ flex: 1, position: 'relative', height: '100%' }}>
+          <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+
+          {/* Floating Brightness Legend on Map */}
+          <div style={{
+            position: 'absolute',
+            bottom: '20px',
+            right: '20px',
+            zIndex: 1000,
+            background: 'rgba(12, 18, 29, 0.92)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '8px',
+            padding: '8px 14px',
+            fontSize: '11px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+          }}>
+            <div style={{ color: '#94a3b8', fontWeight: 600, marginBottom: '5px' }}>Thermal Brightness Intensity</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '10px', color: '#facc15', fontWeight: 700 }}>Moderate (&lt;340K)</span>
+              <div style={{
+                width: '100px',
+                height: '6px',
+                borderRadius: '999px',
+                background: 'linear-gradient(to right, #facc15, #f97316, #ef4444)'
+              }} />
+              <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700 }}>Severe (&gt;375K)</span>
+            </div>
+          </div>
         </div>
 
-        {/* TAB 1: SURVEILLANCE & CONTROLS */}
-        {activeTab === 'surveillance' && (
-          <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Right Sidebar: Surveillance & Telemetry Controls */}
+        <div style={{
+          width: '380px',
+          height: '100%',
+          backgroundColor: '#0c121d',
+          borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 1000,
+          boxShadow: '-10px 0 35px rgba(0, 0, 0, 0.6)'
+        }}>
 
-            {/* Observation Date */}
+          {/* Sidebar Header (NO Overview button, NO Calendar tab) */}
+          <div style={{
+            padding: '14px 18px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            backgroundColor: '#080d1a',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sliders size={15} color="#ea580c" />
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                Surveillance Controls
+              </span>
+            </div>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              color: '#ea580c',
+              backgroundColor: 'rgba(234, 88, 12, 0.1)',
+              border: '1px solid rgba(234, 88, 12, 0.25)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>
+              LIVE TELEMETRY
+            </span>
+          </div>
+
+          {/* Controls Body */}
+          <div style={{ padding: '18px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+            {/* Observation Date Picker */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
                 Observation Date
               </label>
               <div style={{ position: 'relative' }}>
@@ -755,49 +820,49 @@ export default function App() {
                   onChange={(e) => setDate(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '12px 14px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    backgroundColor: '#070b14',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '6px',
                     color: '#f8fafc',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     fontFamily: 'inherit',
                     outline: 'none',
                     cursor: 'pointer'
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', color: '#64748b' }}>
-                <span>Available dataset: {dateRange.min_date}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', fontSize: '10px', color: '#64748b' }}>
+                <span>Range: {dateRange.min_date}</span>
                 <span>to {dateRange.max_date}</span>
               </div>
             </div>
 
-            {/* Diurnal Filter */}
+            {/* Diurnal Cycle Filter */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
                 Diurnal Cycle
               </label>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
-                gap: '6px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                padding: '4px',
-                borderRadius: '8px',
+                gap: '5px',
+                background: '#070b14',
+                padding: '3px',
+                borderRadius: '6px',
                 border: '1px solid rgba(255, 255, 255, 0.08)'
               }}>
                 <button
                   type="button"
                   onClick={() => setDaynight('ALL')}
                   style={{
-                    padding: '9px 8px',
-                    borderRadius: '6px',
+                    padding: '7px 6px',
+                    borderRadius: '4px',
                     border: 'none',
-                    fontSize: '12px',
-                    fontWeight: 600,
+                    fontSize: '11px',
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    backgroundColor: daynight === 'ALL' ? '#f97316' : 'transparent',
+                    backgroundColor: daynight === 'ALL' ? '#ea580c' : 'transparent',
                     color: daynight === 'ALL' ? '#ffffff' : '#94a3b8',
                     transition: 'all 0.15s'
                   }}>
@@ -807,51 +872,51 @@ export default function App() {
                   type="button"
                   onClick={() => setDaynight('D')}
                   style={{
-                    padding: '9px 8px',
-                    borderRadius: '6px',
+                    padding: '7px 6px',
+                    borderRadius: '4px',
                     border: 'none',
-                    fontSize: '12px',
-                    fontWeight: 600,
+                    fontSize: '11px',
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    backgroundColor: daynight === 'D' ? '#f97316' : 'transparent',
+                    backgroundColor: daynight === 'D' ? '#ea580c' : 'transparent',
                     color: daynight === 'D' ? '#ffffff' : '#94a3b8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
+                    gap: '5px',
                     transition: 'all 0.15s'
                   }}>
-                  <Sun size={14} /> Day
+                  <Sun size={13} /> Day
                 </button>
                 <button
                   type="button"
                   onClick={() => setDaynight('N')}
                   style={{
-                    padding: '9px 8px',
-                    borderRadius: '6px',
+                    padding: '7px 6px',
+                    borderRadius: '4px',
                     border: 'none',
-                    fontSize: '12px',
-                    fontWeight: 600,
+                    fontSize: '11px',
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    backgroundColor: daynight === 'N' ? '#f97316' : 'transparent',
+                    backgroundColor: daynight === 'N' ? '#ea580c' : 'transparent',
                     color: daynight === 'N' ? '#ffffff' : '#94a3b8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
+                    gap: '5px',
                     transition: 'all 0.15s'
                   }}>
-                  <Moon size={14} /> Night
+                  <Moon size={13} /> Night
                 </button>
               </div>
             </div>
 
-            {/* Quick Benchmark Days */}
+            {/* Quick Benchmark Outbreak Days */}
             <div>
-              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Key Fire Outbreak Dates:
+              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Key Fire Outbreak Benchmarks:
               </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '6px' }}>
                 {[
                   { label: 'Apr 15, 2021', val: '2021-04-15' },
                   { label: 'May 01, 2022', val: '2022-05-01' },
@@ -862,13 +927,15 @@ export default function App() {
                     key={p.val}
                     onClick={() => setDate(p.val)}
                     style={{
-                      background: date === p.val ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                      border: `1px solid ${date === p.val ? '#f97316' : 'rgba(255, 255, 255, 0.08)'}`,
-                      color: date === p.val ? '#f97316' : '#94a3b8',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      cursor: 'pointer'
+                      background: date === p.val ? 'rgba(234, 88, 12, 0.2)' : '#070b14',
+                      border: `1px solid ${date === p.val ? '#ea580c' : 'rgba(255, 255, 255, 0.08)'}`,
+                      color: date === p.val ? '#ea580c' : '#94a3b8',
+                      padding: '5px 8px',
+                      borderRadius: '5px',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
                     }}>
                     {p.label}
                   </button>
@@ -876,46 +943,46 @@ export default function App() {
               </div>
             </div>
 
-            {/* Live Metrics Grid */}
+            {/* Daily Metrics Grid */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.02)',
+              background: '#070b14',
               border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '12px',
-              padding: '16px'
+              borderRadius: '8px',
+              padding: '14px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Daily Observation Summary
                 </span>
-                {loading && <RefreshCw size={14} color="#f97316" className="animate-spin" />}
+                {loading && <RefreshCw size={13} color="#ea580c" className="animate-spin" />}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Active Spots</div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#f97316', marginTop: '2px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div style={{ background: '#0c121d', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>Active Spots</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#ea580c', marginTop: '2px' }}>
                     {stats.count.toLocaleString()}
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Peak Brightness</div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#f8fafc', marginTop: '2px' }}>
-                    {stats.maxBrightness} <span style={{ fontSize: '12px', color: '#64748b' }}>K</span>
+                <div style={{ background: '#0c121d', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>Peak Brightness</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#f8fafc', marginTop: '2px' }}>
+                    {stats.maxBrightness} <span style={{ fontSize: '10px', color: '#64748b' }}>K</span>
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Avg Brightness</div>
-                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#cbd5e1', marginTop: '2px' }}>
-                    {stats.avgBrightness} <span style={{ fontSize: '11px', color: '#64748b' }}>K</span>
+                <div style={{ background: '#0c121d', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>Avg Brightness</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#cbd5e1', marginTop: '2px' }}>
+                    {stats.avgBrightness} <span style={{ fontSize: '10px', color: '#64748b' }}>K</span>
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Cumulative FRP</div>
-                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#cbd5e1', marginTop: '2px' }}>
-                    {Number(stats.totalFrp).toLocaleString()} <span style={{ fontSize: '11px', color: '#64748b' }}>MW</span>
+                <div style={{ background: '#0c121d', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>Cumulative FRP</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#cbd5e1', marginTop: '2px' }}>
+                    {Number(stats.totalFrp).toLocaleString()} <span style={{ fontSize: '10px', color: '#64748b' }}>MW</span>
                   </div>
                 </div>
               </div>
@@ -924,21 +991,23 @@ export default function App() {
             {/* Clicked Fire Inspection Details */}
             {selectedFire && (
               <div style={{
-                background: 'rgba(249, 115, 22, 0.07)',
-                border: '1px solid rgba(249, 115, 22, 0.3)',
-                borderRadius: '10px',
-                padding: '14px'
+                background: 'rgba(234, 88, 12, 0.06)',
+                border: '1px solid rgba(234, 88, 12, 0.3)',
+                borderRadius: '8px',
+                padding: '12px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>Inspected Spot</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Inspected Hotspot
+                  </span>
                   <button
                     onClick={() => setSelectedFire(null)}
-                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px' }}>
+                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '12px' }}>
                     ✕
                   </button>
                 </div>
-                <div style={{ fontSize: '12px', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div><strong>Coords:</strong> {selectedFire.lat.toFixed(4)}, {selectedFire.lon.toFixed(4)}</div>
+                <div style={{ fontSize: '11px', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div><strong>Coords:</strong> {selectedFire.lat.toFixed(4)}° N, {selectedFire.lon.toFixed(4)}° E</div>
                   <div><strong>Brightness:</strong> {selectedFire.brightness} K</div>
                   <div><strong>Fire Radiative Power:</strong> {selectedFire.frp} MW</div>
                   <div><strong>Time:</strong> {String(selectedFire.time).padStart(4, '0')} UTC</div>
@@ -948,36 +1017,26 @@ export default function App() {
             )}
 
           </div>
-        )}
 
-        {/* TAB 2: BURNING ACTIVITY CALENDAR HEATMAP */}
-        {activeTab === 'calendar' && (
-          <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-            <ActivityCalendar
-              onSelectDate={handleSelectDateFromCalendar}
-              selectedDate={date}
-            />
+          {/* Panel Footer */}
+          <div style={{
+            padding: '12px 18px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            fontSize: '10px',
+            color: '#64748b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#080d1a'
+          }}>
+            <span>FireSync Engine &bull; India Region</span>
+            <span style={{ color: '#94a3b8' }}>3,285,447 Records</span>
           </div>
-        )}
 
-        {/* Panel Footer */}
-        <div style={{
-          padding: '14px 20px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          fontSize: '11px',
-          color: '#64748b',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: '#090e17'
-        }}>
-          <span>FireSync Harmonized Engine</span>
-          <span style={{ color: '#94a3b8' }}>3,258,122 Records</span>
         </div>
 
       </div>
 
     </div>
-    </>
   );
 }

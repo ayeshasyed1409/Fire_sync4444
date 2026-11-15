@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Flame, TrendingUp, BarChart2, Info } from 'lucide-react';
+import { 
+  Calendar as CalendarIcon, 
+  Flame, 
+  TrendingUp, 
+  ArrowRight,
+  Database,
+  Satellite,
+  Clock,
+  Sparkles
+} from 'lucide-react';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -70,79 +79,185 @@ export default function ActivityCalendar({ onSelectDate, selectedDate }) {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{
+      maxWidth: '1240px',
+      margin: '0 auto',
+      padding: '36px 28px 60px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '28px'
+    }}>
       
-      {/* Calendar Header with Mode Toggles */}
+      {/* PAGE HEADER */}
       <div style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
-        paddingBottom: '16px',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.07)'
+        flexWrap: 'wrap',
+        gap: '20px',
+        paddingBottom: '24px',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
       }}>
         <div>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.01em' }}>
-            Burning Activity Heatmap
-          </h3>
-          <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-            Multi-year fire intensity history across seasons & diurnal shifts
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: '#f97316',
+              backgroundColor: 'rgba(249, 115, 22, 0.12)',
+              border: '1px solid rgba(249, 115, 22, 0.25)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>
+              Temporal Analysis
+            </span>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>&bull; 2020 &ndash; 2026 Archive</span>
+          </div>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em', margin: 0 }}>
+            Burning Activity Calendar
+          </h1>
+          <p style={{ fontSize: '14px', color: '#94a3b8', margin: '6px 0 0', maxWidth: '680px' }}>
+            Multi-year fire intensity history and seasonal distribution across India. Click any cell to launch that date in the Live Surveillance Map.
           </p>
         </div>
 
+        {/* View Mode Toggle Buttons */}
         <div style={{
           display: 'flex',
-          background: 'rgba(255, 255, 255, 0.05)',
-          padding: '3px',
+          backgroundColor: '#0c1322',
+          padding: '4px',
           borderRadius: '8px',
           border: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
           <button
             onClick={() => setViewMode('matrix')}
             style={{
-              padding: '6px 12px',
+              padding: '8px 16px',
               borderRadius: '6px',
               border: 'none',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: 600,
               cursor: 'pointer',
               backgroundColor: viewMode === 'matrix' ? '#f97316' : 'transparent',
               color: viewMode === 'matrix' ? '#ffffff' : '#94a3b8',
               transition: 'all 0.15s ease'
             }}>
-            Year-vs-Month
+            Year-vs-Month Matrix
           </button>
           <button
             onClick={() => setViewMode('daily')}
             style={{
-              padding: '6px 12px',
+              padding: '8px 16px',
               borderRadius: '6px',
               border: 'none',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: 600,
               cursor: 'pointer',
               backgroundColor: viewMode === 'daily' ? '#f97316' : 'transparent',
               color: viewMode === 'daily' ? '#ffffff' : '#94a3b8',
               transition: 'all 0.15s ease'
             }}>
-            Daily Matrix
+            Daily Calendar Heatmap
           </button>
+        </div>
+      </div>
+
+      {/* TOP KPI SUMMARY STRIP */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '16px'
+      }}>
+        <div style={{
+          backgroundColor: '#0c1322',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          padding: '16px 20px'
+        }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Total Harmonized Records
+          </div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: '#f97316', marginTop: '4px' }}>
+            3,285,447
+          </div>
+          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+            Deduplicated ~1.1 km² Grid
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: '#0c1322',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          padding: '16px 20px'
+        }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Peak Recorded Day
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 800, color: '#f8fafc', marginTop: '4px' }}>
+            2021-04-01
+          </div>
+          <div style={{ fontSize: '12px', color: '#f97316', marginTop: '2px' }}>
+            18,566 Active Detections
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: '#0c1322',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          padding: '16px 20px'
+        }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Observation Span
+          </div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: '#22c55e', marginTop: '4px' }}>
+            2,191 Days
+          </div>
+          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+            Nov 1, 2020 &ndash; Nov 2, 2026
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: '#0c1322',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          padding: '16px 20px'
+        }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Sensors Integrated
+          </div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: '#cbd5e1', marginTop: '4px' }}>
+            MODIS + VIIRS
+          </div>
+          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+            Terra, Aqua & Suomi-NPP
+          </div>
         </div>
       </div>
 
       {/* VIEW 1: YEAR VS MONTH HEATMAP MATRIX */}
       {viewMode === 'matrix' && (
-        <div>
-          <div style={{ overflowX: 'auto', paddingBottom: '6px' }}>
-            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '4px', fontSize: '11px' }}>
+        <div style={{
+          backgroundColor: '#0c1322',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '12px',
+          padding: '24px'
+        }}>
+          <div style={{ overflowX: 'auto', paddingBottom: '10px' }}>
+            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '6px', fontSize: '12px' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '6px 8px', color: '#64748b', fontWeight: 600 }}>Year</th>
-                  {MONTH_NAMES.map((m, i) => (
-                    <th key={m} style={{ textAlign: 'center', padding: '6px 4px', color: '#94a3b8', fontWeight: 600 }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: '#64748b', fontWeight: 700, fontSize: '12px' }}>Year</th>
+                  {MONTH_NAMES.map((m) => (
+                    <th key={m} style={{ textAlign: 'center', padding: '10px 6px', color: '#94a3b8', fontWeight: 700, fontSize: '12px' }}>
                       {m}
                     </th>
                   ))}
-                  <th style={{ textAlign: 'right', padding: '6px 8px', color: '#64748b', fontWeight: 600 }}>Total</th>
+                  <th style={{ textAlign: 'right', padding: '10px 12px', color: '#64748b', fontWeight: 700, fontSize: '12px' }}>Annual Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,7 +265,9 @@ export default function ActivityCalendar({ onSelectDate, selectedDate }) {
                   let yearTotal = 0;
                   return (
                     <tr key={yr}>
-                      <td style={{ fontWeight: 700, color: '#cbd5e1', padding: '6px 8px' }}>{yr}</td>
+                      <td style={{ fontWeight: 800, color: '#f8fafc', padding: '10px 12px', fontSize: '13px', fontFamily: 'monospace' }}>
+                        {yr}
+                      </td>
                       {Array.from({ length: 12 }, (_, i) => i + 1).map(monthNum => {
                         const cell = matrixMap[yr] ? matrixMap[yr][monthNum] : null;
                         const count = cell ? cell.fires : 0;
@@ -171,25 +288,25 @@ export default function ActivityCalendar({ onSelectDate, selectedDate }) {
                             }}
                             style={{
                               backgroundColor: color,
-                              height: '32px',
+                              height: '44px',
                               borderRadius: '6px',
                               textAlign: 'center',
                               cursor: cell ? 'pointer' : 'default',
-                              border: isHovered ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.05)',
-                              transition: 'transform 0.15s ease, border-color 0.15s',
-                              transform: isHovered ? 'scale(1.12)' : 'none',
+                              border: isHovered ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.06)',
+                              transition: 'transform 0.15s ease, box-shadow 0.15s',
+                              transform: isHovered ? 'scale(1.08)' : 'none',
                               zIndex: isHovered ? 10 : 1,
                               color: count > 30000 ? '#ffffff' : (count > 0 ? '#111827' : 'transparent'),
                               fontWeight: 700,
-                              fontSize: '10px'
+                              fontSize: '11px'
                             }}
-                            title={cell ? `${MONTH_NAMES[monthNum - 1]} ${yr}: ${count.toLocaleString()} fires` : 'No data'}
+                            title={cell ? `${MONTH_NAMES[monthNum - 1]} ${yr}: ${count.toLocaleString()} fire spots` : 'No data'}
                           >
                             {count > 0 ? (count >= 1000 ? `${Math.round(count / 1000)}k` : count) : ''}
                           </td>
                         );
                       })}
-                      <td style={{ textAlign: 'right', padding: '6px 8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <td style={{ textAlign: 'right', padding: '10px 12px', color: '#cbd5e1', fontWeight: 700, fontFamily: 'monospace' }}>
                         {yearTotal > 0 ? yearTotal.toLocaleString() : '—'}
                       </td>
                     </tr>
@@ -201,37 +318,39 @@ export default function ActivityCalendar({ onSelectDate, selectedDate }) {
 
           {/* Hover Detail Card */}
           <div style={{
-            minHeight: '48px',
-            marginTop: '12px',
-            padding: '10px 14px',
+            minHeight: '52px',
+            marginTop: '16px',
+            padding: '12px 18px',
             borderRadius: '8px',
-            backgroundColor: hoveredCell ? 'rgba(249, 115, 22, 0.08)' : 'rgba(255, 255, 255, 0.02)',
-            border: `1px solid ${hoveredCell ? 'rgba(249, 115, 22, 0.25)' : 'rgba(255, 255, 255, 0.05)'}`,
+            backgroundColor: hoveredCell ? 'rgba(249, 115, 22, 0.09)' : 'rgba(255, 255, 255, 0.02)',
+            border: `1px solid ${hoveredCell ? 'rgba(249, 115, 22, 0.3)' : 'rgba(255, 255, 255, 0.06)'}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            fontSize: '12px'
+            fontSize: '13px'
           }}>
             {hoveredCell ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Flame size={16} color="#f97316" />
-                  <span style={{ fontWeight: 700, color: '#f8fafc' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Flame size={18} color="#f97316" />
+                  <span style={{ fontWeight: 800, color: '#f8fafc' }}>
                     {MONTH_NAMES[hoveredCell.month - 1]} {hoveredCell.year}:
                   </span>
-                  <span style={{ color: '#fb923c', fontWeight: 700 }}>
-                    {hoveredCell.fires.toLocaleString()} fire spots
+                  <span style={{ color: '#fb923c', fontWeight: 800 }}>
+                    {hoveredCell.fires.toLocaleString()} active fire detections
                   </span>
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '11px', display: 'flex', gap: '12px' }}>
-                  <span>Avg: <strong>{hoveredCell.avg_b} K</strong></span>
-                  <span>Peak: <strong>{hoveredCell.max_b} K</strong></span>
-                  <span style={{ color: '#f97316', fontWeight: 600 }}>Click to jump to date</span>
+                <div style={{ color: '#94a3b8', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+                  <span>Avg Brightness: <strong style={{ color: '#cbd5e1' }}>{hoveredCell.avg_b} K</strong></span>
+                  <span>Peak: <strong style={{ color: '#cbd5e1' }}>{hoveredCell.max_b} K</strong></span>
+                  <span style={{ color: '#f97316', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Click cell to open map <ArrowRight size={13} />
+                  </span>
                 </div>
               </>
             ) : (
-              <span style={{ color: '#64748b', fontSize: '11px' }}>
-                Hover over any month cell to view metrics, or click to load that period onto the map.
+              <span style={{ color: '#64748b', fontSize: '12px' }}>
+                Hover over any month cell to view thermal metrics, or click a cell to open the Live Map for that period.
               </span>
             )}
           </div>
@@ -240,22 +359,27 @@ export default function ActivityCalendar({ onSelectDate, selectedDate }) {
 
       {/* VIEW 2: DAILY CALENDAR MATRIX FOR SELECTED YEAR */}
       {viewMode === 'daily' && (
-        <div>
+        <div style={{
+          backgroundColor: '#0c1322',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '12px',
+          padding: '24px'
+        }}>
           {/* Year Selector Chips */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, marginRight: '4px' }}>YEAR:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700, marginRight: '4px' }}>SELECT YEAR:</span>
             {availableYears.map(yr => (
               <button
                 key={yr}
                 onClick={() => setSelectedYear(yr)}
                 style={{
-                  padding: '4px 10px',
+                  padding: '6px 14px',
                   borderRadius: '6px',
                   border: `1px solid ${selectedYear === yr ? '#f97316' : 'rgba(255,255,255,0.08)'}`,
                   background: selectedYear === yr ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255,255,255,0.03)',
                   color: selectedYear === yr ? '#f97316' : '#94a3b8',
-                  fontSize: '11px',
-                  fontWeight: 600,
+                  fontSize: '12px',
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}>
                 {yr}
@@ -263,20 +387,20 @@ export default function ActivityCalendar({ onSelectDate, selectedDate }) {
             ))}
           </div>
 
-          {/* GitHub-style Contribution Grid */}
+          {/* Contribution Grid */}
           <div style={{
             background: 'rgba(255, 255, 255, 0.02)',
             borderRadius: '10px',
             border: '1px solid rgba(255, 255, 255, 0.06)',
-            padding: '14px',
+            padding: '20px',
             overflowX: 'auto'
           }}>
             <div style={{
               display: 'grid',
               gridAutoFlow: 'column',
-              gridTemplateRows: 'repeat(7, 12px)',
-              gridAutoColumns: '12px',
-              gap: '3px'
+              gridTemplateRows: 'repeat(7, 15px)',
+              gridAutoColumns: '15px',
+              gap: '4px'
             }}>
               {dailyData.map((d) => {
                 const isSelected = selectedDate === d.date;
@@ -285,13 +409,13 @@ export default function ActivityCalendar({ onSelectDate, selectedDate }) {
                     key={d.date}
                     onClick={() => onSelectDate(d.date)}
                     style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '2px',
+                      width: '15px',
+                      height: '15px',
+                      borderRadius: '3px',
                       backgroundColor: getDailyColor(d.count),
                       cursor: 'pointer',
                       border: isSelected ? '2px solid #ffffff' : 'none',
-                      boxShadow: isSelected ? '0 0 8px #f97316' : 'none',
+                      boxShadow: isSelected ? '0 0 10px #f97316' : 'none',
                       transition: 'transform 0.1s'
                     }}
                     title={`${d.date}: ${d.count.toLocaleString()} fire detections`}
@@ -301,37 +425,40 @@ export default function ActivityCalendar({ onSelectDate, selectedDate }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', fontSize: '11px', color: '#64748b' }}>
-            <span>Showing {dailyData.length} recorded days in {selectedYear}</span>
-            <span>Click any day square to inspect on map</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
+            <span>Showing {dailyData.length} recorded observation days in {selectedYear}</span>
+            <span style={{ color: '#ea580c', fontWeight: 600 }}>Click any day square to open that date directly in the Live Map</span>
           </div>
         </div>
       )}
 
       {/* Unified Color Ramp Scale Bar */}
       <div style={{
-        marginTop: '6px',
-        padding: '12px',
-        background: 'rgba(255, 255, 255, 0.02)',
-        borderRadius: '8px',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
+        padding: '16px 20px',
+        backgroundColor: '#0c1322',
+        borderRadius: '10px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px'
       }}>
-        <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Relative Burning Scale:</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '10px', color: '#64748b' }}>Low</span>
-          <div style={{ display: 'flex', gap: '3px' }}>
+          <Flame size={16} color="#f97316" />
+          <span style={{ fontSize: '12px', color: '#cbd5e1', fontWeight: 700 }}>Relative Fire Frequency Scale:</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '11px', color: '#64748b' }}>Low Count</span>
+          <div style={{ display: 'flex', gap: '4px' }}>
             {['#fef08a', '#facc15', '#f97316', '#dc2626', '#7f1d1d'].map((col, idx) => (
-              <div key={idx} style={{ width: '22px', height: '10px', borderRadius: '2px', backgroundColor: col }} />
+              <div key={idx} style={{ width: '28px', height: '12px', borderRadius: '3px', backgroundColor: col }} />
             ))}
           </div>
-          <span style={{ fontSize: '10px', color: '#64748b' }}>Severe Hotspot Peak</span>
+          <span style={{ fontSize: '11px', color: '#64748b' }}>Severe Outbreak Peak</span>
         </div>
       </div>
 
     </div>
   );
 }
-
