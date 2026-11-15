@@ -172,7 +172,7 @@ class FireRequestHandler(BaseHTTPRequestHandler):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
-        sql = "SELECT latitude, longitude, brightness, frp, daynight, instrument, confidence_cat, acq_time FROM fires WHERE acq_date = ?"
+        sql = "SELECT latitude, longitude, brightness, frp, daynight, instrument, confidence, acq_time, type, confidence_cat FROM fires WHERE acq_date = ?"
         params = [date]
 
         if daynight in ['D', 'N']:
@@ -185,6 +185,13 @@ class FireRequestHandler(BaseHTTPRequestHandler):
 
         results = []
         for r in rows:
+            # Parse type integer (-1 if null, undefined, or -1.0)
+            raw_type = r[8]
+            try:
+                fire_type = int(raw_type) if raw_type is not None else -1
+            except (ValueError, TypeError):
+                fire_type = -1
+
             results.append({
                 "lat": r[0],
                 "lon": r[1],
@@ -193,7 +200,9 @@ class FireRequestHandler(BaseHTTPRequestHandler):
                 "daynight": r[4],
                 "instrument": r[5],
                 "confidence": r[6],
-                "time": r[7]
+                "time": r[7],
+                "type": fire_type,
+                "confidence_cat": r[9]
             })
 
         self.send_response(200)

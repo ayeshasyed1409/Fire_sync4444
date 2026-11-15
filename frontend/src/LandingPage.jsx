@@ -94,7 +94,7 @@ export default function LandingPage({ onLaunchApp }) {
         padding: '56px 24px 44px',
         textAlign: 'center'
       }}>
-        
+
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',

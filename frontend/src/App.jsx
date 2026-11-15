@@ -38,6 +38,95 @@ const INITIAL_BOUNDS = [
   [37.5, 97.5]
 ];
 
+export const FIRE_TYPE_INFO = {
+  0: {
+    code: 0,
+    title: 'Presumed vegetation fire',
+    desc: 'Standard wildfires, forest fires, or agricultural crop burning.',
+    badgeBg: 'rgba(34, 197, 94, 0.12)',
+    badgeBorder: 'rgba(34, 197, 94, 0.35)',
+    badgeColor: '#4ade80'
+  },
+  1: {
+    code: 1,
+    title: 'Active volcano',
+    desc: 'Thermal anomalies located at known active volcanic sites.',
+    badgeBg: 'rgba(239, 68, 68, 0.12)',
+    badgeBorder: 'rgba(239, 68, 68, 0.35)',
+    badgeColor: '#f87171'
+  },
+  2: {
+    code: 2,
+    title: 'Other static land source',
+    desc: 'Persistent industrial heat sources like gas flares, steel mills, or power plants.',
+    badgeBg: 'rgba(56, 189, 248, 0.12)',
+    badgeBorder: 'rgba(56, 189, 248, 0.35)',
+    badgeColor: '#38bdf8'
+  },
+  3: {
+    code: 3,
+    title: 'Offshore',
+    desc: 'Thermal anomalies detected over water, usually caused by offshore oil and gas platforms.',
+    badgeBg: 'rgba(168, 85, 247, 0.12)',
+    badgeBorder: 'rgba(168, 85, 247, 0.35)',
+    badgeColor: '#c084fc'
+  },
+  '-1': {
+    code: -1,
+    title: 'Undetermined',
+    desc: 'Undetermined thermal source or unclassified detection.',
+    badgeBg: 'rgba(148, 163, 184, 0.12)',
+    badgeBorder: 'rgba(148, 163, 184, 0.35)',
+    badgeColor: '#94a3b8'
+  }
+};
+
+export function getFireTypeInfo(typeCode) {
+  const codeKey = typeCode !== undefined && typeCode !== null ? String(typeCode) : '-1';
+  return FIRE_TYPE_INFO[codeKey] || FIRE_TYPE_INFO['-1'];
+}
+
+export function formatConfidence(conf, confCat) {
+  if (conf === null || conf === undefined) {
+    if (!confCat) return { label: 'Undetermined', level: 'unknown', color: '#94a3b8' };
+  }
+  const strConf = String(conf || '').trim().toLowerCase();
+  const strCat = String(confCat || '').trim().toLowerCase();
+
+  // If numeric percentage like "85", "100", "0"
+  if (strConf !== '' && !isNaN(Number(strConf))) {
+    const num = Number(strConf);
+    let level = 'High';
+    let color = '#22c55e';
+    if (num < 50) {
+      level = 'Low';
+      color = '#94a3b8';
+    } else if (num < 80) {
+      level = 'Nominal';
+      color = '#facc15';
+    }
+    return {
+      label: `${num}% (${level})`,
+      level,
+      color
+    };
+  }
+
+  // If letter like 'h', 'n', 'l'
+  const letter = strConf || strCat;
+  if (letter === 'h' || letter === 'high') {
+    return { label: 'High', level: 'High', color: '#22c55e' };
+  }
+  if (letter === 'n' || letter === 'nominal') {
+    return { label: 'Nominal', level: 'Nominal', color: '#facc15' };
+  }
+  if (letter === 'l' || letter === 'low') {
+    return { label: 'Low', level: 'Low', color: '#94a3b8' };
+  }
+
+  return { label: String(conf || confCat || 'Undetermined'), level: 'Undetermined', color: '#94a3b8' };
+}
+
 export default function App() {
   const [view, setView] = useState('landing'); // 'landing' | 'map' | 'calendar'
   const [date, setDate] = useState('2021-04-15');
@@ -260,17 +349,31 @@ export default function App() {
         fillOpacity: 0.9
       });
 
+      const confInfo = formatConfidence(fire.confidence, fire.confidence_cat);
+      const typeInfo = getFireTypeInfo(fire.type);
+
       const popupHtml = `
-        <div style="font-family: inherit; font-size: 13px;">
+        <div style="font-family: inherit; font-size: 13px; min-width: 220px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:6px;">
               <span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${fillColor};"></span>
               <strong style="font-size: 13px; color:#f8fafc;">Thermal Hotspot</strong>
             </div>
-            <span style="font-size:10px; font-weight:700; color:${fillColor}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);">
-              ${fire.confidence ? fire.confidence.toUpperCase() : 'CONFIRMED'}
+            <span style="font-size:10px; font-weight:700; color:${confInfo.color}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);">
+              ${confInfo.label}
             </span>
           </div>
+
+          <!-- Fire Classification Type -->
+          <div style="margin-bottom:8px; padding:6px 8px; border-radius:6px; background:${typeInfo.badgeBg}; border:1px solid ${typeInfo.badgeBorder}; font-size:11px;">
+            <div style="font-weight:800; color:${typeInfo.badgeColor}; font-size:11px;">
+              Type ${typeInfo.code}: ${typeInfo.title}
+            </div>
+            <div style="font-size:10px; color:#cbd5e1; margin-top:2px; line-height:1.3;">
+              ${typeInfo.desc}
+            </div>
+          </div>
+
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size: 12px; color:#cbd5e1;">
             <div><strong>Location:</strong> ${fire.lat.toFixed(4)}° N, ${fire.lon.toFixed(4)}° E</div>
             <div><strong>Brightness:</strong> <span style="color:#fb923c; font-weight:700;">${fire.brightness} K</span></div>
@@ -280,7 +383,7 @@ export default function App() {
             <div><strong>Sensor:</strong> ${fire.instrument}</div>
           </div>
           <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size: 11px; color:#94a3b8; display:flex; justify-content:space-between;">
-            <span>NASA FIRMS Active Detection</span>
+            <span>NASA FIRMS Detection</span>
             <span>Date: <strong>${date}</strong></span>
           </div>
         </div>
@@ -988,32 +1091,136 @@ export default function App() {
             </div>
 
             {/* Clicked Fire Inspection Details */}
-            {selectedFire && (
-              <div style={{
-                background: 'rgba(234, 88, 12, 0.06)',
-                border: '1px solid rgba(234, 88, 12, 0.3)',
-                borderRadius: '8px',
-                padding: '12px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Inspected Hotspot
-                  </span>
-                  <button
-                    onClick={() => setSelectedFire(null)}
-                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '12px' }}>
-                    ✕
-                  </button>
+            {selectedFire && (() => {
+              const confInfo = formatConfidence(selectedFire.confidence, selectedFire.confidence_cat);
+              const typeInfo = getFireTypeInfo(selectedFire.type);
+
+              return (
+                <div style={{
+                  background: 'rgba(234, 88, 12, 0.06)',
+                  border: '1px solid rgba(234, 88, 12, 0.3)',
+                  borderRadius: '10px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ea580c',
+                        boxShadow: '0 0 8px #ea580c'
+                      }} />
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Inspected Hotspot
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedFire(null)}
+                      title="Close Inspector"
+                      style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Classification Type Card */}
+                  <div style={{
+                    backgroundColor: typeInfo.badgeBg,
+                    border: `1px solid ${typeInfo.badgeBorder}`,
+                    borderRadius: '8px',
+                    padding: '9px 11px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        color: typeInfo.badgeColor,
+                        letterSpacing: '0.02em'
+                      }}>
+                        Type {typeInfo.code} &bull; {typeInfo.title}
+                      </span>
+                    </div>
+                    <p style={{
+                      fontSize: '11px',
+                      color: '#cbd5e1',
+                      margin: 0,
+                      lineHeight: 1.45
+                    }}>
+                      {typeInfo.desc}
+                    </p>
+                  </div>
+
+                  {/* Confidence & Telemetry Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div style={{
+                      background: '#070b14',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.06)'
+                    }}>
+                      <div style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div>
+                      <div style={{ color: confInfo.color, fontWeight: 800, fontSize: '12px', marginTop: '2px' }}>
+                        {confInfo.label}
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: '#070b14',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.06)'
+                    }}>
+                      <div style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Thermal Brightness</div>
+                      <div style={{ color: '#ea580c', fontWeight: 800, fontSize: '12px', marginTop: '2px' }}>
+                        {selectedFire.brightness} K
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: '#070b14',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.06)'
+                    }}>
+                      <div style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Fire Radiative Power</div>
+                      <div style={{ color: '#f8fafc', fontWeight: 800, fontSize: '12px', marginTop: '2px' }}>
+                        {selectedFire.frp} MW
+                      </div>
+                    </div>
+
+                    <div style={{
+                      background: '#070b14',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.06)'
+                    }}>
+                      <div style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Overpass Time</div>
+                      <div style={{ color: '#f8fafc', fontWeight: 800, fontSize: '12px', marginTop: '2px' }}>
+                        {String(selectedFire.time).padStart(4, '0')} UTC
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Location & Metadata Details */}
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#94a3b8',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    paddingTop: '8px'
+                  }}>
+                    <div><strong>Coordinates:</strong> {selectedFire.lat.toFixed(4)}° N, {selectedFire.lon.toFixed(4)}° E</div>
+                    <div><strong>Sensor:</strong> {selectedFire.instrument} ({selectedFire.daynight === 'D' ? 'Day' : 'Night'} pass)</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '11px', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div><strong>Coords:</strong> {selectedFire.lat.toFixed(4)}° N, {selectedFire.lon.toFixed(4)}° E</div>
-                  <div><strong>Brightness:</strong> {selectedFire.brightness} K</div>
-                  <div><strong>Fire Radiative Power:</strong> {selectedFire.frp} MW</div>
-                  <div><strong>Time:</strong> {String(selectedFire.time).padStart(4, '0')} UTC</div>
-                  <div><strong>Sensor:</strong> {selectedFire.instrument}</div>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
           </div>
 
