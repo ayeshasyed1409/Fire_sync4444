@@ -405,8 +405,7 @@ export default function App() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            cursor: 'pointer',
+            gap: '12px',
             userSelect: 'none'
           }}>
           <div style={{
