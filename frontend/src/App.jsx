@@ -82,6 +82,12 @@ export default function App() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureStatus, setCaptureStatus] = useState(null); // 'success' | 'error' | null
 
+  // Coordinate manual input & target pointer state
+  const [inputLat, setInputLat] = useState('');
+  const [inputLon, setInputLon] = useState('');
+  const [isEditingCoords, setIsEditingCoords] = useState(false);
+  const [targetPin, setTargetPin] = useState(null); // { lat, lng } | null
+
   // Spatial drawing & region filter state
   const [selectedRegion, setSelectedRegion] = useState(null); // { minLat, maxLat, minLon, maxLon } | null
   const [isDrawing, setIsDrawing] = useState(false);
@@ -91,6 +97,7 @@ export default function App() {
   const markersLayerRef = useRef(null);
   const selectionLayerRef = useRef(null);
   const drawLayerRef = useRef(null);
+  const targetPinLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
 
   const handleLaunchMap = (targetDate = null) => {
@@ -139,6 +146,9 @@ export default function App() {
 
     const drawGroup = L.layerGroup().addTo(map);
     drawLayerRef.current = drawGroup;
+
+    const targetPinGroup = L.layerGroup().addTo(map);
+    targetPinLayerRef.current = targetPinGroup;
 
     // Track live cursor coordinates on mousemove
     map.on('mousemove', (e) => {
@@ -633,6 +643,100 @@ export default function App() {
     }
   };
 
+  // Helper to parse coordinate strings (supporting decimals, N/S/E/W, and negatives)
+  const parseCoordinate = (val, isLat = true) => {
+    if (typeof val !== 'string') return NaN;
+    const clean = val.trim().toUpperCase();
+    if (!clean) return NaN;
+    let sign = 1;
+    if (isLat) {
+      if (clean.includes('S')) sign = -1;
+    } else {
+      if (clean.includes('W')) sign = -1;
+    }
+    const numericStr = clean.replace(/[^0-9.-]/g, '');
+    const num = parseFloat(numericStr);
+    return isNaN(num) ? NaN : (numericStr.startsWith('-') ? num : num * sign);
+  };
+
+  // Jump map to entered coordinates and set cursor target pointer
+  const handleJumpToCoords = (e) => {
+    if (e) e.preventDefault();
+    const lat = parseCoordinate(inputLat, true);
+    const lon = parseCoordinate(inputLon, false);
+
+    if (isNaN(lat) || isNaN(lon)) {
+      alert("Please enter valid latitude and longitude numbers (e.g. 28.6139 and 77.2090).");
+      return;
+    }
+
+    if (lat < -90 || lat > 90) {
+      alert("Latitude must be between -90° and 90°.");
+      return;
+    }
+
+    if (lon < -180 || lon > 180) {
+      alert("Longitude must be between -180° and 180°.");
+      return;
+    }
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([lat, lon], Math.max(mapInstanceRef.current.getZoom(), 9), {
+        duration: 1.2
+      });
+    }
+
+    setTargetPin({ lat, lng: lon });
+    setCursorCoords({ lat, lng: lon, active: true });
+    setIsEditingCoords(false);
+  };
+
+  // Render animated cursor pointer / target crosshair on the map
+  useEffect(() => {
+    if (!mapInstanceRef.current || !targetPinLayerRef.current) return;
+    const layer = targetPinLayerRef.current;
+    layer.clearLayers();
+
+    if (targetPin) {
+      const cursorTargetIcon = L.divIcon({
+        className: 'target-cursor-marker',
+        html: `
+          <div style="position:relative; width:44px; height:44px; transform:translate(-22px, -22px); pointer-events:auto; cursor:pointer;" title="Target: ${targetPin.lat.toFixed(4)}°, ${targetPin.lng.toFixed(4)}°">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="22" cy="22" r="18" stroke="#ea580c" stroke-width="2" stroke-dasharray="3 3" opacity="0.9"/>
+              <circle cx="22" cy="22" r="9" fill="#ea580c" fill-opacity="0.3" stroke="#ffffff" stroke-width="1.8"/>
+              <circle cx="22" cy="22" r="3.5" fill="#ffffff"/>
+              <line x1="22" y1="1" x2="22" y2="12" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="22" y1="32" x2="22" y2="43" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="1" y1="22" x2="12" y2="22" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+              <line x1="32" y1="22" x2="43" y2="22" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+        `,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      });
+
+      const marker = L.marker([targetPin.lat, targetPin.lng], { icon: cursorTargetIcon });
+
+      const popupContent = `
+        <div style="font-family: inherit; font-size: 12px; min-width: 170px;">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:5px;">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ea580c;"></span>
+            <strong style="color:#f8fafc; font-size:12px;">Target Coordinates</strong>
+          </div>
+          <div style="color:#cbd5e1; font-size:11px; line-height:1.5;">
+            <div><strong>Latitude:</strong> <span style="color:#ea580c; font-weight:700;">${targetPin.lat.toFixed(4)}° ${targetPin.lat >= 0 ? 'N' : 'S'}</span></div>
+            <div><strong>Longitude:</strong> <span style="color:#ea580c; font-weight:700;">${targetPin.lng.toFixed(4)}° ${targetPin.lng >= 0 ? 'E' : 'W'}</span></div>
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent).openPopup();
+      layer.addLayer(marker);
+    }
+  }, [targetPin]);
+
   return (
     <div style={{
       display: 'flex',
@@ -791,39 +895,139 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {view === 'map' && (
             <>
-              {/* Coordinates HUD */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                backgroundColor: '#070b14',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '6px',
-                padding: '5px 10px',
-                fontFamily: 'monospace',
-                fontSize: '11px'
-              }}>
-                <span style={{ color: '#64748b', fontWeight: 600 }}>LAT</span>
-                <span style={{ color: '#f8fafc', fontWeight: 700 }}>
-                  {cursorCoords ? `${Math.abs(cursorCoords.lat).toFixed(4)}° ${cursorCoords.lat >= 0 ? 'N' : 'S'}` : '--'}
-                </span>
-                <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
-                <span style={{ color: '#64748b', fontWeight: 600 }}>LON</span>
-                <span style={{ color: '#f8fafc', fontWeight: 700 }}>
-                  {cursorCoords ? `${Math.abs(cursorCoords.lng).toFixed(4)}° ${cursorCoords.lng >= 0 ? 'E' : 'W'}` : '--'}
-                </span>
-                <div
-                  style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    backgroundColor: cursorCoords?.active ? '#22c55e' : '#64748b',
-                    boxShadow: cursorCoords?.active ? '0 0 6px #22c55e' : 'none',
-                    transition: 'all 0.2s ease'
+              {/* Interactive Coordinates HUD with Direct Input Navigation */}
+              <form
+                onSubmit={handleJumpToCoords}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#070b14',
+                  border: isEditingCoords ? '1px solid #ea580c' : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: isEditingCoords ? '0 0 12px rgba(234, 88, 12, 0.3)' : 'none'
+                }}>
+                <span style={{ color: '#ea580c', fontWeight: 700, fontSize: '10px' }}>LAT</span>
+                <input
+                  type="text"
+                  value={isEditingCoords ? inputLat : (cursorCoords ? `${cursorCoords.lat.toFixed(4)}${cursorCoords.lat >= 0 ? '°N' : '°S'}` : '')}
+                  placeholder="e.g. 28.6139"
+                  title="Latitude (Click to edit, press Enter to locate)"
+                  onFocus={() => {
+                    setIsEditingCoords(true);
+                    setInputLat(cursorCoords ? cursorCoords.lat.toFixed(4) : '');
+                    setInputLon(cursorCoords ? cursorCoords.lng.toFixed(4) : '');
                   }}
-                  title={cursorCoords?.active ? 'Live cursor tracking active' : 'Map center position'}
+                  onChange={(e) => setInputLat(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setIsEditingCoords(false);
+                  }}
+                  style={{
+                    width: isEditingCoords ? '66px' : '62px',
+                    backgroundColor: isEditingCoords ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: '#f8fafc',
+                    fontWeight: 700,
+                    fontSize: '11px',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    textAlign: 'center',
+                    padding: '2px 4px'
+                  }}
                 />
-              </div>
+
+                <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+
+                <span style={{ color: '#ea580c', fontWeight: 700, fontSize: '10px' }}>LON</span>
+                <input
+                  type="text"
+                  value={isEditingCoords ? inputLon : (cursorCoords ? `${cursorCoords.lng.toFixed(4)}${cursorCoords.lng >= 0 ? '°E' : '°W'}` : '')}
+                  placeholder="e.g. 77.2090"
+                  title="Longitude (Click to edit, press Enter to locate)"
+                  onFocus={() => {
+                    setIsEditingCoords(true);
+                    setInputLat(cursorCoords ? cursorCoords.lat.toFixed(4) : '');
+                    setInputLon(cursorCoords ? cursorCoords.lng.toFixed(4) : '');
+                  }}
+                  onChange={(e) => setInputLon(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setIsEditingCoords(false);
+                  }}
+                  style={{
+                    width: isEditingCoords ? '66px' : '62px',
+                    backgroundColor: isEditingCoords ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: '#f8fafc',
+                    fontWeight: 700,
+                    fontSize: '11px',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    textAlign: 'center',
+                    padding: '2px 4px'
+                  }}
+                />
+
+                <button
+                  type="submit"
+                  title="Locate coordinates on map"
+                  style={{
+                    background: isEditingCoords ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'rgba(255, 255, 255, 0.08)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '3px 7px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease'
+                  }}>
+                  <Crosshair size={11} />
+                  <span>Go</span>
+                </button>
+
+                {targetPin ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetPin(null);
+                      setIsEditingCoords(false);
+                    }}
+                    title="Clear coordinate target pin"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      padding: '0 2px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                    <X size={12} />
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: cursorCoords?.active ? '#22c55e' : '#64748b',
+                      boxShadow: cursorCoords?.active ? '0 0 6px #22c55e' : 'none',
+                      transition: 'all 0.2s ease',
+                      marginLeft: '2px'
+                    }}
+                    title={cursorCoords?.active ? 'Live cursor tracking active' : 'Map center position'}
+                  />
+                )}
+              </form>
 
               {/* Basemap Switcher */}
               <div style={{
