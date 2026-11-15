@@ -117,3 +117,29 @@ body {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Map Crosshair Cursor */
+.leaflet-container {
+  cursor: crosshair !important;
+}
+
+/* Smooth Marker Transitions */
+.leaflet-interactive {
+  transition: r 0.2s cubic-bezier(0.4, 0, 0.2, 1), fill-opacity 0.2s ease, stroke-width 0.2s ease;
+}
+
+/* Pulse Beacon Animation */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+}

@@ -12,7 +12,10 @@ import {
   Globe,
   Eye,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  Camera,
+  Crosshair,
+  Check
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -43,9 +46,16 @@ export default function App() {
   const [selectedFire, setSelectedFire] = useState(null);
   const [mapLayer, setMapLayer] = useState('satellite');
 
+  // Real-time cursor coordinates and map capture state
+  const [cursorCoords, setCursorCoords] = useState({ lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1], active: false });
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [captureStatus, setCaptureStatus] = useState(null); // 'success' | 'error' | null
+  const [dotStyle, setDotStyle] = useState('glow'); // 'glow' | 'crisp' | 'pulse'
+
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
+  const selectionLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
 
   // Initialize Map
@@ -65,13 +75,45 @@ export default function App() {
 
     const initialTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; Esri &mdash; NASA FIRMS Active Fire Hotspots',
-      maxZoom: 18
+      maxZoom: 18,
+      crossOrigin: true
     }).addTo(map);
 
     tileLayerRef.current = initialTile;
 
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
+
+    const selectionGroup = L.layerGroup().addTo(map);
+    selectionLayerRef.current = selectionGroup;
+
+    // Track live cursor coordinates on mousemove
+    map.on('mousemove', (e) => {
+      setCursorCoords({
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+        active: true
+      });
+    });
+
+    map.on('mouseout', () => {
+      const center = map.getCenter();
+      setCursorCoords({
+        lat: center.lat,
+        lng: center.lng,
+        active: false
+      });
+    });
+
+    map.on('move', () => {
+      setCursorCoords(prev => {
+        if (!prev?.active) {
+          const center = map.getCenter();
+          return { lat: center.lat, lng: center.lng, active: false };
+        }
+        return prev;
+      });
+    });
 
     mapInstanceRef.current = map;
 
@@ -90,12 +132,14 @@ export default function App() {
     if (mapLayer === 'standard') {
       newTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
+        maxZoom: 19,
+        crossOrigin: true
       });
     } else {
       newTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: '&copy; Esri &mdash; NASA FIRMS Active Fire Hotspots',
-        maxZoom: 18
+        maxZoom: 18,
+        crossOrigin: true
       });
     }
 
@@ -150,7 +194,7 @@ export default function App() {
       });
   }, [date, daynight]);
 
-  // Render Static Hotspot Markers
+  // Render Hotspot Markers with Luminous Satellite Thermal Styling
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
 
@@ -169,44 +213,268 @@ export default function App() {
 
     fires.forEach((fire) => {
       const relBrightness = Math.max(0, Math.min(1, (fire.brightness - minB) / bSpan));
-      const radius = 4 + (relBrightness * 9);
-      const fillOpacity = 0.55 + (relBrightness * 0.4);
-      const color = relBrightness > 0.7 ? '#ff3b00' : (relBrightness > 0.35 ? '#f97316' : '#fb923c');
+      
+      // Determine authentic thermal color hierarchy & glowing bloom
+      let coreColor, glowColor, strokeColor, coreRadius, glowRadius;
+      
+      if (relBrightness > 0.7) {
+        // Severe / Extreme Heatspot: White-hot gold core, incandescent red-orange bloom
+        coreColor = '#fffbeb';
+        glowColor = '#ff2200';
+        strokeColor = '#f59e0b';
+        coreRadius = 3.6 + (relBrightness * 2.4); // 3.6px - 6.0px
+        glowRadius = 8.0 + (relBrightness * 6.0); // 8.0px - 14.0px
+      } else if (relBrightness > 0.35) {
+        // High Intensity Hotspot: Solar orange core, fire-amber bloom
+        coreColor = '#fb923c';
+        glowColor = '#ea580c';
+        strokeColor = '#fed7aa';
+        coreRadius = 2.8 + (relBrightness * 2.0); // 2.8px - 4.8px
+        glowRadius = 5.5 + (relBrightness * 4.5); // 5.5px - 10.0px
+      } else {
+        // Moderate Intensity Hotspot: Deep radiant crimson core, subtle red aura
+        coreColor = '#ef4444';
+        glowColor = '#b91c1c';
+        strokeColor = '#fca5a5';
+        coreRadius = 2.2 + (relBrightness * 1.6); // 2.2px - 3.8px
+        glowRadius = 4.0 + (relBrightness * 3.0); // 4.0px - 7.0px
+      }
 
+      // 1. Soft atmospheric thermal glow aura (Organic heat bloom without harsh white borders)
+      if (dotStyle !== 'crisp') {
+        const glowHalo = L.circleMarker([fire.lat, fire.lon], {
+          radius: glowRadius,
+          fillColor: glowColor,
+          stroke: false,
+          fillOpacity: dotStyle === 'pulse' ? 0.36 : 0.22,
+          interactive: false
+        });
+        layer.addLayer(glowHalo);
+      }
+
+      // 2. High-precision luminous core
       const circle = L.circleMarker([fire.lat, fire.lon], {
-        radius: radius,
-        fillColor: color,
-        color: '#ffedd5',
-        weight: relBrightness > 0.6 ? 1.5 : 0.8,
-        opacity: 0.95,
-        fillOpacity: fillOpacity
+        radius: dotStyle === 'crisp' ? Math.max(2.5, coreRadius * 0.9) : coreRadius,
+        fillColor: coreColor,
+        color: strokeColor,
+        weight: 0.75,
+        opacity: 0.9,
+        fillOpacity: 0.95
       });
 
       const popupHtml = `
         <div style="font-family: inherit; font-size: 13px;">
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f97316;"></span>
-            <strong style="font-size: 13px; color:#ffedd5;">Thermal Detection</strong>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${glowColor}; box-shadow:0 0 8px ${glowColor};"></span>
+              <strong style="font-size: 13px; color:#f8fafc;">Thermal Hotspot</strong>
+            </div>
+            <span style="font-size:10px; font-weight:700; color:${coreColor}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);">
+              ${fire.confidence ? fire.confidence.toUpperCase() : 'CONFIRMED'}
+            </span>
           </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size: 12px; color:#cbd5e1;">
-            <div><strong>Location:</strong> ${fire.lat.toFixed(4)}, ${fire.lon.toFixed(4)}</div>
+            <div><strong>Location:</strong> ${fire.lat.toFixed(4)}° N, ${fire.lon.toFixed(4)}° E</div>
             <div><strong>Brightness:</strong> <span style="color:#fb923c; font-weight:700;">${fire.brightness} K</span></div>
             <div><strong>FRP:</strong> ${fire.frp} MW</div>
             <div><strong>Time:</strong> ${String(fire.time).padStart(4, '0')} UTC</div>
             <div><strong>Cycle:</strong> ${fire.daynight === 'D' ? 'Day' : 'Night'}</div>
-            <div><strong>Confidence:</strong> ${fire.confidence.toUpperCase()}</div>
+            <div><strong>Sensor:</strong> ${fire.instrument}</div>
           </div>
-          <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size: 11px; color:#94a3b8;">
-            Sensor: <strong>${fire.instrument}</strong>
+          <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.1); font-size: 11px; color:#94a3b8; display:flex; justify-content:space-between;">
+            <span>NASA FIRMS Active Detection</span>
+            <span>Date: <strong>${date}</strong></span>
           </div>
         </div>
       `;
 
       circle.bindPopup(popupHtml);
       circle.on('click', () => setSelectedFire(fire));
+      
+      // Dynamic hover interaction
+      circle.on('mouseover', function () {
+        this.setRadius(coreRadius + 2.5);
+        this.setStyle({ weight: 1.5, opacity: 1 });
+      });
+      circle.on('mouseout', function () {
+        this.setRadius(dotStyle === 'crisp' ? Math.max(2.5, coreRadius * 0.9) : coreRadius);
+        this.setStyle({ weight: 0.75, opacity: 0.9 });
+      });
+
       layer.addLayer(circle);
     });
-  }, [fires]);
+  }, [fires, dotStyle, date]);
+
+  // Pulse beacon for inspected / selected fire
+  useEffect(() => {
+    if (!mapInstanceRef.current || !selectionLayerRef.current) return;
+    const layer = selectionLayerRef.current;
+    layer.clearLayers();
+
+    if (selectedFire) {
+      const beaconRing = L.circleMarker([selectedFire.lat, selectedFire.lon], {
+        radius: 18,
+        fillColor: '#f97316',
+        color: '#ffffff',
+        weight: 2,
+        opacity: 0.95,
+        fillOpacity: 0.15,
+        dashArray: '3, 4'
+      });
+      const centerDot = L.circleMarker([selectedFire.lat, selectedFire.lon], {
+        radius: 4,
+        fillColor: '#ffffff',
+        color: '#f97316',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1
+      });
+      layer.addLayer(beaconRing);
+      layer.addLayer(centerDot);
+    }
+  }, [selectedFire]);
+
+  // Capture Screenshot of the Map
+  const handleCaptureMap = async () => {
+    if (!mapInstanceRef.current || !mapContainerRef.current || isCapturing) return;
+    setIsCapturing(true);
+    setCaptureStatus(null);
+
+    try {
+      const container = mapContainerRef.current;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+
+      // Create high-resolution export canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = width * pixelRatio;
+      canvas.height = height * pixelRatio;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(pixelRatio, pixelRatio);
+
+      // Fill dark base background
+      ctx.fillStyle = '#06090e';
+      ctx.fillRect(0, 0, width, height);
+
+      // 1. Draw Map Tiles
+      const tileImages = container.querySelectorAll('.leaflet-tile-pane img');
+      const containerRect = container.getBoundingClientRect();
+
+      for (const img of tileImages) {
+        if (!img.complete || img.naturalWidth === 0) continue;
+        const rect = img.getBoundingClientRect();
+        const x = rect.left - containerRect.left;
+        const y = rect.top - containerRect.top;
+        const w = rect.width;
+        const h = rect.height;
+
+        try {
+          ctx.drawImage(img, x, y, w, h);
+        } catch (err) {
+          console.warn('Tile render fallback:', err);
+        }
+      }
+
+      // 2. Draw Vector Overlays (Markers)
+      const overlaySvg = container.querySelector('.leaflet-overlay-pane svg');
+      const overlayCanvas = container.querySelector('.leaflet-overlay-pane canvas');
+
+      if (overlayCanvas) {
+        const rect = overlayCanvas.getBoundingClientRect();
+        const x = rect.left - containerRect.left;
+        const y = rect.top - containerRect.top;
+        ctx.drawImage(overlayCanvas, x, y, rect.width, rect.height);
+      } else if (overlaySvg) {
+        let svgString = new XMLSerializer().serializeToString(overlaySvg);
+        if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
+          svgString = svgString.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(svgBlob);
+        const svgImg = new Image();
+
+        await new Promise((resolve) => {
+          svgImg.onload = () => {
+            const rect = overlaySvg.getBoundingClientRect();
+            const x = rect.left - containerRect.left;
+            const y = rect.top - containerRect.top;
+            ctx.drawImage(svgImg, x, y, rect.width, rect.height);
+            URL.revokeObjectURL(blobUrl);
+            resolve();
+          };
+          svgImg.onerror = () => {
+            URL.revokeObjectURL(blobUrl);
+            resolve();
+          };
+          svgImg.src = blobUrl;
+        });
+      }
+
+      // 3. Telemetry Header Banner
+      const headerH = 44;
+      ctx.fillStyle = 'rgba(12, 18, 29, 0.92)';
+      ctx.fillRect(0, 0, width, headerH);
+      ctx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, headerH);
+      ctx.lineTo(width, headerH);
+      ctx.stroke();
+
+      ctx.fillStyle = '#f97316';
+      ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('🔥 FireSync', 16, 27);
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`NASA FIRMS Satellite Fire Intelligence | Observation Date: ${date} | Active Hotspots: ${stats.count} | Peak: ${stats.maxBrightness} K`, 110, 27);
+
+      // 4. Coordinates & Timestamp Footer Banner
+      const footerH = 28;
+      ctx.fillStyle = 'rgba(12, 18, 29, 0.88)';
+      ctx.fillRect(0, height - footerH, width, footerH);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.beginPath();
+      ctx.moveTo(0, height - footerH);
+      ctx.lineTo(width, height - footerH);
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      const mapCenter = mapInstanceRef.current ? mapInstanceRef.current.getCenter() : { lat: 0, lng: 0 };
+      ctx.fillText(`Center: ${mapCenter.lat.toFixed(4)}° N, ${mapCenter.lng.toFixed(4)}° E | Layer: ${mapLayer.toUpperCase()} | Captured: ${new Date().toLocaleString()}`, 16, height - 9);
+
+      // Export PNG file
+      const fileName = `FireSync-Map-${date}-${Date.now()}.png`;
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          const dataUrl = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.download = fileName;
+          a.href = dataUrl;
+          a.click();
+        } else {
+          const downloadUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.download = fileName;
+          a.href = downloadUrl;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(downloadUrl), 2000);
+        }
+        setCaptureStatus('success');
+        setTimeout(() => setCaptureStatus(null), 3500);
+      }, 'image/png');
+    } catch (err) {
+      console.error('Failed to capture map screenshot:', err);
+      setCaptureStatus('error');
+      setTimeout(() => setCaptureStatus(null), 4000);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const fitBounds = () => {
     if (mapInstanceRef.current) {
@@ -279,6 +547,152 @@ export default function App() {
           </div>
         </div>
 
+        {/* Top Center: Live Cursor Coordinates HUD */}
+        <div style={{
+          position: 'absolute',
+          top: '18px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          background: 'rgba(12, 18, 29, 0.92)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(249, 115, 22, 0.35)',
+          borderRadius: '30px',
+          padding: '8px 20px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 16px rgba(249, 115, 22, 0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          userSelect: 'none',
+          pointerEvents: 'auto'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Crosshair size={14} color="#f97316" />
+            <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em', color: '#fb923c', textTransform: 'uppercase' }}>
+              Coordinates
+            </span>
+          </div>
+
+          <div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.15)' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontFamily: 'monospace', fontSize: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>LAT</span>
+              <span style={{ color: '#f8fafc', fontWeight: 700 }}>
+                {cursorCoords ? `${Math.abs(cursorCoords.lat).toFixed(4)}° ${cursorCoords.lat >= 0 ? 'N' : 'S'}` : '--'}
+              </span>
+            </div>
+
+            <div style={{ width: '1px', height: '10px', background: 'rgba(255, 255, 255, 0.08)' }} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>LON</span>
+              <span style={{ color: '#f8fafc', fontWeight: 700 }}>
+                {cursorCoords ? `${Math.abs(cursorCoords.lng).toFixed(4)}° ${cursorCoords.lng >= 0 ? 'E' : 'W'}` : '--'}
+              </span>
+            </div>
+          </div>
+
+          <div 
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              background: cursorCoords?.active ? '#22c55e' : '#64748b',
+              boxShadow: cursorCoords?.active ? '0 0 8px #22c55e' : 'none',
+              transition: 'all 0.2s ease'
+            }} 
+            title={cursorCoords?.active ? 'Live cursor tracking active' : 'Map center position'} 
+          />
+        </div>
+
+        {/* Top Right: Capture Map & Dot Style Controls */}
+        <div style={{
+          position: 'absolute',
+          top: '18px',
+          right: '18px',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          {/* Dot Style Switcher */}
+          <div style={{
+            background: 'rgba(12, 18, 29, 0.88)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '10px',
+            padding: '3px',
+            display: 'flex',
+            gap: '2px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+          }}>
+            {[
+              { id: 'glow', label: 'Thermal Glow' },
+              { id: 'crisp', label: 'Clean' },
+              { id: 'pulse', label: 'Intense' }
+            ].map(style => (
+              <button
+                key={style.id}
+                onClick={() => setDotStyle(style.id)}
+                title={`Switch dots to ${style.label} rendering style`}
+                style={{
+                  background: dotStyle === style.id ? 'rgba(249, 115, 22, 0.22)' : 'transparent',
+                  color: dotStyle === style.id ? '#fb923c' : '#94a3b8',
+                  border: `1px solid ${dotStyle === style.id ? 'rgba(249, 115, 22, 0.35)' : 'transparent'}`,
+                  padding: '5px 10px',
+                  borderRadius: '7px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}>
+                {style.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Screenshot Capture Button */}
+          <button
+            onClick={handleCaptureMap}
+            disabled={isCapturing}
+            title="Capture and download high-resolution screenshot of the map"
+            style={{
+              background: captureStatus === 'success' ? '#15803d' : 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '8px 14px',
+              fontSize: '12px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: isCapturing ? 'wait' : 'pointer',
+              boxShadow: captureStatus === 'success' 
+                ? '0 0 16px rgba(34, 197, 94, 0.4)' 
+                : '0 4px 18px rgba(249, 115, 22, 0.4)',
+              transition: 'all 0.2s ease'
+            }}>
+            {isCapturing ? (
+              <>
+                <RefreshCw size={14} className="animate-spin" />
+                <span>Capturing...</span>
+              </>
+            ) : captureStatus === 'success' ? (
+              <>
+                <Check size={14} />
+                <span>Saved!</span>
+              </>
+            ) : (
+              <>
+                <Camera size={15} />
+                <span>Capture Map</span>
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Map View Mode Controls */}
         <div style={{
           position: 'absolute',
@@ -338,31 +752,47 @@ export default function App() {
             }}>
             <Maximize2 size={14} />
           </button>
+          <button 
+            onClick={handleCaptureMap}
+            title="Capture Screenshot of Map"
+            style={{
+              background: 'transparent',
+              color: '#94a3b8',
+              border: 'none',
+              padding: '6px 10px',
+              borderRadius: '7px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+            <Camera size={14} />
+          </button>
         </div>
 
         {/* Floating Brightness Legend on Map */}
         <div style={{
           position: 'absolute',
           bottom: '22px',
-          right: '480px',
+          right: '18px',
           zIndex: 1000,
-          background: 'rgba(12, 18, 29, 0.85)',
+          background: 'rgba(12, 18, 29, 0.88)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '10px',
           padding: '8px 14px',
-          fontSize: '11px'
+          fontSize: '11px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
         }}>
-          <div style={{ color: '#94a3b8', fontWeight: 600, marginBottom: '5px' }}>Relative Brightness Intensity</div>
+          <div style={{ color: '#94a3b8', fontWeight: 600, marginBottom: '5px' }}>Thermal Brightness Intensity</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '10px', color: '#64748b' }}>Low</span>
+            <span style={{ fontSize: '10px', color: '#64748b' }}>Moderate</span>
             <div style={{
-              width: '100px',
+              width: '110px',
               height: '6px',
               borderRadius: '999px',
-              background: 'linear-gradient(to right, #fb923c, #f97316, #ff3b00)'
+              background: 'linear-gradient(to right, #ef4444, #f97316, #fb923c, #fffbeb)'
             }} />
-            <span style={{ fontSize: '10px', color: '#64748b' }}>Severe</span>
+            <span style={{ fontSize: '10px', color: '#fef08a', fontWeight: 700 }}>Severe (>375K)</span>
           </div>
         </div>
       </div>
