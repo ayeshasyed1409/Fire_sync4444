@@ -50,7 +50,6 @@ export default function App() {
   const [cursorCoords, setCursorCoords] = useState({ lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1], active: false });
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureStatus, setCaptureStatus] = useState(null); // 'success' | 'error' | null
-  const [dotStyle, setDotStyle] = useState('glow'); // 'glow' | 'crisp' | 'pulse'
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -194,7 +193,7 @@ export default function App() {
       });
   }, [date, daynight]);
 
-  // Render Hotspot Markers with Luminous Satellite Thermal Styling
+  // Render Hotspot Markers
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
 
@@ -214,62 +213,43 @@ export default function App() {
     fires.forEach((fire) => {
       const relBrightness = Math.max(0, Math.min(1, (fire.brightness - minB) / bSpan));
 
-      // Determine authentic thermal color hierarchy & glowing bloom
-      let coreColor, glowColor, strokeColor, coreRadius, glowRadius;
+      // Color gradation: Yellow (moderate) -> Orange (high) -> Red (severe)
+      let fillColor, strokeColor, radius;
 
       if (relBrightness > 0.7) {
-        // Severe / Extreme Heatspot: White-hot gold core, incandescent red-orange bloom
-        coreColor = '#fffbeb';
-        glowColor = '#ff2200';
-        strokeColor = '#f59e0b';
-        coreRadius = 3.6 + (relBrightness * 2.4); // 3.6px - 6.0px
-        glowRadius = 8.0 + (relBrightness * 6.0); // 8.0px - 14.0px
+        // Severe: Vivid red
+        fillColor = '#ef4444';
+        strokeColor = '#b91c1c';
+        radius = 4.5 + (relBrightness * 2.0); // 4.5px - 6.5px
       } else if (relBrightness > 0.35) {
-        // High Intensity Hotspot: Solar orange core, fire-amber bloom
-        coreColor = '#fb923c';
-        glowColor = '#ea580c';
-        strokeColor = '#fed7aa';
-        coreRadius = 2.8 + (relBrightness * 2.0); // 2.8px - 4.8px
-        glowRadius = 5.5 + (relBrightness * 4.5); // 5.5px - 10.0px
+        // High: Flame orange
+        fillColor = '#f97316';
+        strokeColor = '#ea580c';
+        radius = 3.5 + (relBrightness * 1.8); // 3.5px - 5.0px
       } else {
-        // Moderate Intensity Hotspot: Deep radiant crimson core, subtle red aura
-        coreColor = '#ef4444';
-        glowColor = '#b91c1c';
-        strokeColor = '#fca5a5';
-        coreRadius = 2.2 + (relBrightness * 1.6); // 2.2px - 3.8px
-        glowRadius = 4.0 + (relBrightness * 3.0); // 4.0px - 7.0px
+        // Moderate: Warm Yellow
+        fillColor = '#facc15';
+        strokeColor = '#ca8a04';
+        radius = 2.8 + (relBrightness * 1.5); // 2.8px - 3.8px
       }
 
-      // 1. Soft atmospheric thermal glow aura (Organic heat bloom without harsh white borders)
-      if (dotStyle !== 'crisp') {
-        const glowHalo = L.circleMarker([fire.lat, fire.lon], {
-          radius: glowRadius,
-          fillColor: glowColor,
-          stroke: false,
-          fillOpacity: dotStyle === 'pulse' ? 0.36 : 0.22,
-          interactive: false
-        });
-        layer.addLayer(glowHalo);
-      }
-
-      // 2. High-precision luminous core
       const circle = L.circleMarker([fire.lat, fire.lon], {
-        radius: dotStyle === 'crisp' ? Math.max(2.5, coreRadius * 0.9) : coreRadius,
-        fillColor: coreColor,
+        radius: radius,
+        fillColor: fillColor,
         color: strokeColor,
-        weight: 0.75,
-        opacity: 0.9,
-        fillOpacity: 0.95
+        weight: 1,
+        opacity: 0.95,
+        fillOpacity: 0.9
       });
 
       const popupHtml = `
         <div style="font-family: inherit; font-size: 13px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${glowColor}; box-shadow:0 0 8px ${glowColor};"></span>
+              <span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${fillColor};"></span>
               <strong style="font-size: 13px; color:#f8fafc;">Thermal Hotspot</strong>
             </div>
-            <span style="font-size:10px; font-weight:700; color:${coreColor}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);">
+            <span style="font-size:10px; font-weight:700; color:${fillColor}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);">
               ${fire.confidence ? fire.confidence.toUpperCase() : 'CONFIRMED'}
             </span>
           </div>
@@ -293,17 +273,17 @@ export default function App() {
 
       // Dynamic hover interaction
       circle.on('mouseover', function () {
-        this.setRadius(coreRadius + 2.5);
-        this.setStyle({ weight: 1.5, opacity: 1 });
+        this.setRadius(radius + 2);
+        this.setStyle({ weight: 2, opacity: 1 });
       });
       circle.on('mouseout', function () {
-        this.setRadius(dotStyle === 'crisp' ? Math.max(2.5, coreRadius * 0.9) : coreRadius);
-        this.setStyle({ weight: 0.75, opacity: 0.9 });
+        this.setRadius(radius);
+        this.setStyle({ weight: 1, opacity: 0.95 });
       });
 
       layer.addLayer(circle);
     });
-  }, [fires, dotStyle, date]);
+  }, [fires, date]);
 
   // Pulse beacon for inspected / selected fire
   useEffect(() => {
@@ -606,53 +586,13 @@ export default function App() {
           />
         </div>
 
-        {/* Top Right: Capture Map & Dot Style Controls */}
+        {/* Top Right: Screenshot Capture Button */}
         <div style={{
           position: 'absolute',
           top: '18px',
           right: '18px',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
+          zIndex: 1000
         }}>
-          {/* Dot Style Switcher */}
-          <div style={{
-            background: 'rgba(12, 18, 29, 0.88)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '10px',
-            padding: '3px',
-            display: 'flex',
-            gap: '2px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
-          }}>
-            {[
-              { id: 'glow', label: 'Thermal Glow' },
-              { id: 'crisp', label: 'Clean' },
-              { id: 'pulse', label: 'Intense' }
-            ].map(style => (
-              <button
-                key={style.id}
-                onClick={() => setDotStyle(style.id)}
-                title={`Switch dots to ${style.label} rendering style`}
-                style={{
-                  background: dotStyle === style.id ? 'rgba(249, 115, 22, 0.22)' : 'transparent',
-                  color: dotStyle === style.id ? '#fb923c' : '#94a3b8',
-                  border: `1px solid ${dotStyle === style.id ? 'rgba(249, 115, 22, 0.35)' : 'transparent'}`,
-                  padding: '5px 10px',
-                  borderRadius: '7px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}>
-                {style.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Screenshot Capture Button */}
           <button
             onClick={handleCaptureMap}
             disabled={isCapturing}
@@ -785,14 +725,14 @@ export default function App() {
         }}>
           <div style={{ color: '#94a3b8', fontWeight: 600, marginBottom: '5px' }}>Thermal Brightness Intensity</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '10px', color: '#64748b' }}>Moderate</span>
+            <span style={{ fontSize: '10px', color: '#facc15', fontWeight: 700 }}>Moderate</span>
             <div style={{
               width: '110px',
               height: '6px',
               borderRadius: '999px',
-              background: 'linear-gradient(to right, #ef4444, #f97316, #fb923c, #fffbeb)'
+              background: 'linear-gradient(to right, #facc15, #f97316, #ef4444)'
             }} />
-            <span style={{ fontSize: '10px', color: '#fef08a', fontWeight: 700 }}>Severe (&gt;375K)</span>
+            <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 700 }}>Severe (&gt;375K)</span>
           </div>
         </div>
       </div>
