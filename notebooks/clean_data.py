@@ -14,9 +14,13 @@ print("1. Loading raw CSV files...")
 modis = pd.read_csv(modis_path, low_memory=False)
 viirs = pd.read_csv(viirs_path, low_memory=False)
 
-print("2. Removing rows with missing 'type' values...")
-modis_clean = modis.dropna(subset=['type']).copy()
-viirs_clean = viirs.dropna(subset=['type']).copy()
+print("2. Preserving Near Real-Time (NRT) rows by filling unclassified 'type' with -1...")
+# Archive data has classified types (0=vegetation, etc.), while NRT has missing types.
+# We fill with -1 so recent data (Aug-Nov 2026) is preserved.
+modis['type'] = modis['type'].fillna(-1)
+viirs['type'] = viirs['type'].fillna(-1)
+modis_clean = modis.copy()
+viirs_clean = viirs.copy()
 
 print("3. Standardizing the Confidence column (adding 'confidence_cat')...")
 # Translating MODIS to match VIIRS (l, n, h) without deleting the original column
